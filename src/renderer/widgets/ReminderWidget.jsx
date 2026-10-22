@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { parseReminderEdit } from '@shared/editParse'
 import { formatWhen, parseWhen } from '@shared/timeparse'
 import { api } from '../api'
-import { pinWidgetParams, useFooterHints } from '../hooks/useWidget'
+import { isEditable, pinWidgetParams, useFooterHints } from '../hooks/useWidget'
 import { useStore } from '../store/useStore'
 import styles from './widgets.module.css'
 
@@ -21,6 +22,8 @@ export default function ReminderWidget({ params }) {
   const [repeat, setRepeat] = useState(params.repeat ?? 'none')
   const [error, setError] = useState(null)
   const created = useRef(false)
+  const [quick, setQuick] = useState('')
+  const [quickMiss, setQuickMiss] = useState(false)
 
   const parsedFromText = whenText.trim() ? parseWhen(whenText) : null
   const effectiveWhen = parsedFromText ? toInput(parsedFromText.toISOString()) : when
@@ -96,8 +99,10 @@ export default function ReminderWidget({ params }) {
   useEffect(() => {
     if (editing) return
     const on = (e) => {
-      if (e.key.toLowerCase() === 'e' && !e.metaKey) (e.preventDefault(), setEditing(true))
-      else if (e.metaKey && e.key === 'Backspace') (e.preventDefault(), remove())
+      if (e.key.toLowerCase() === 'e' && !e.metaKey && !isEditable(e.target))
+        (e.preventDefault(), setEditing(true))
+      else if (e.metaKey && e.key === 'Backspace' && !isEditable(e.target))
+        (e.preventDefault(), remove())
     }
     window.addEventListener('keydown', on)
     return () => window.removeEventListener('keydown', on)
@@ -117,7 +122,61 @@ export default function ReminderWidget({ params }) {
             </div>
           </div>
         </div>
+        <input
+          className={`${styles.text} ${styles.quick}`}
+          value={quick}
+          aria-label="Change reminder"
+          placeholder={
+            quickMiss
+              ? 'Couldn’t read that — try “tomorrow 9am”'
+              : 'Change it: “tomorrow 9am”, “in 2 hours”, “make it daily”'
+          }
+          onChange={(e) => {
+            setQuick(e.target.value)
+            setQuickMiss(false)
+          }}
+          onKeyDown={async (e) => {
+            if (e.key !== 'Enter') return
+            e.preventDefault()
+            const edit = parseReminderEdit(quick)
+            setQuickMiss(!edit)
+            if (!edit) return
+            try {
+              apply(
+                await api.reminders.update({
+                  id: reminder.id,
+                  ...(edit.remindAt ? { remindAt: edit.remindAt.toISOString() } : {}),
+                  ...(edit.repeat ? { repeat: edit.repeat } : {})
+                })
+              )
+              setQuick('')
+            } catch (err) {
+              setError(err.message)
+            }
+          }}
+        />
         <div className={styles.controls} style={{ justifyContent: 'flex-start' }}>
+          <select
+            className={styles.select}
+            style={{ width: 118, height: 30, fontSize: 12.5 }}
+            value=""
+            aria-label="Snooze"
+            onChange={async (e) => {
+              const minutes = Number(e.target.value)
+              if (!minutes) return
+              try {
+                apply(await api.reminders.snooze(reminder.id, minutes))
+              } catch (err) {
+                setError(err.message)
+              }
+            }}
+          >
+            <option value="">Snooze…</option>
+            <option value="5">5 minutes</option>
+            <option value="10">10 minutes</option>
+            <option value="60">1 hour</option>
+            <option value="180">3 hours</option>
+          </select>
           <button className={styles.btn} onClick={() => setEditing(true)}>
             Edit <kbd>E</kbd>
           </button>

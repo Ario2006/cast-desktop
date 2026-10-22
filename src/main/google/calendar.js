@@ -57,8 +57,8 @@ export function createCalendarClient({ auth, fetch = globalThis.fetch }) {
   const enc = encodeURIComponent
 
   return {
-    async listCalendars() {
-      const r = await call('GET', '/users/me/calendarList', { query: { minAccessRole: 'writer' } })
+    async listCalendars({ minAccessRole = 'writer' } = {}) {
+      const r = await call('GET', '/users/me/calendarList', { query: { minAccessRole } })
       return (r.items ?? []).map((c) => ({
         id: c.id,
         name: c.summaryOverride || c.summary,
@@ -86,6 +86,45 @@ export function createCalendarClient({ auth, fetch = globalThis.fetch }) {
           start: e.start?.dateTime ?? e.start?.date,
           end: e.end?.dateTime ?? e.end?.date
         }))
+    },
+
+    /** Everything happening in [start, end) across the user's calendars, sorted by start. */
+    async listAgenda({ start, end, maxCalendars = 8 }) {
+      const calendars = (await this.listCalendars({ minAccessRole: 'reader' })).slice(
+        0,
+        maxCalendars
+      )
+      const perCal = await Promise.all(
+        calendars.map(
+          (c) =>
+            call('GET', `/calendars/${enc(c.id)}/events`, {
+              query: {
+                timeMin: start,
+                timeMax: end,
+                singleEvents: true,
+                orderBy: 'startTime',
+                maxResults: 25
+              }
+            })
+              .then((r) => (r.items ?? []).map((e) => ({ e, c })))
+              .catch(() => []) // one unreadable calendar must not hide the others
+        )
+      )
+      return perCal
+        .flat()
+        .filter(({ e }) => e.status !== 'cancelled')
+        .map(({ e, c }) => ({
+          id: e.id,
+          title: e.summary || '(no title)',
+          start: e.start?.dateTime ?? e.start?.date,
+          end: e.end?.dateTime ?? e.end?.date,
+          allDay: Boolean(e.start?.date && !e.start?.dateTime),
+          location: e.location || undefined,
+          htmlLink: e.htmlLink,
+          calendar: c.name,
+          color: c.color
+        }))
+        .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
     },
 
     async insertEvent({

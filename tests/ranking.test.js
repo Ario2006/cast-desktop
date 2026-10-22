@@ -13,7 +13,7 @@ const DAY = 86_400_000
 
 describe('scoreSuggestion', () => {
   it('follows 0.5·match + 0.3·ai + 0.1·recency + 0.1·frequency', () => {
-    expect(WEIGHTS).toEqual({ match: 0.5, ai: 0.3, recency: 0.1, frequency: 0.1 })
+    expect(WEIGHTS).toEqual({ match: 0.5, ai: 0.3, recency: 0.1, frequency: 0.1, learned: 0.15 })
     expect(scoreSuggestion(row('a:1', { matchScore: 1, aiConfidence: 1 }))).toBeCloseTo(0.8)
     expect(scoreSuggestion(row('a:1', { matchScore: 0.5 }))).toBeCloseTo(0.25)
   })
@@ -25,6 +25,11 @@ describe('scoreSuggestion', () => {
     expect(fresh).toBeGreaterThan(old)
     const heavy = scoreSuggestion(row('a:1'), { a: { count: 10_000, lastUsed: 0 } }, now)
     expect(heavy).toBeLessThanOrEqual(0.1 + 1e-9)
+  })
+
+  it('adds a small learned bonus for actions you usually pick for this kind of input', () => {
+    const base = scoreSuggestion(row('a:1', { matchScore: 0.5 }))
+    expect(scoreSuggestion(row('a:1', { matchScore: 0.5, learned: 1 }))).toBeCloseTo(base + 0.15)
   })
 
   it('AI term is 0 when unavailable', () => {

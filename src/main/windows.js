@@ -2,8 +2,8 @@ import { join } from 'node:path'
 import { BrowserWindow, screen, session } from 'electron'
 import { IPC, WINDOW } from '../shared/constants.js'
 
-const MIN_HEIGHT = 140
-const MAX_HEIGHT = 860 // settings view is taller than the launcher list
+const MIN_HEIGHT = 96
+const MAX_HEIGHT = 720 // settings view is taller than the launcher list
 
 export const rendererTarget = (page) => {
   const dev = process.env.ELECTRON_RENDERER_URL
@@ -39,7 +39,7 @@ export function createWindows({ getSettings, log }) {
       show: false,
       frame: false,
       resizable: false,
-      movable: false,
+      movable: true, // dragged by the footer / top strip (-webkit-app-region)
       minimizable: false,
       maximizable: false,
       fullscreenable: false,
@@ -73,7 +73,13 @@ export function createWindows({ getSettings, log }) {
     session.defaultSession.setPermissionRequestHandler((_wc, _perm, cb) => cb(false))
 
     win.on('blur', () => {
-      if (!win.isVisible() || Date.now() < suppressBlurUntil || process.env.CAST_SMOKE) return
+      if (
+        !win.isVisible() ||
+        Date.now() < suppressBlurUntil ||
+        process.env.CAST_SMOKE ||
+        process.env.CAST_E2E
+      )
+        return
       if (getSettings().hideOnBlur) api.hide()
     })
     wc.on('did-finish-load', () => {
@@ -128,8 +134,12 @@ export function createWindows({ getSettings, log }) {
       if (!win || win.isDestroyed()) build()
       if (!win.isVisible()) place()
       suppressBlurUntil = Date.now() + 300
-      win.show()
-      win.focus()
+      if (process.env.CAST_E2E || process.env.CAST_SMOKE) {
+        win.showInactive() // automated runs must never grab your real keyboard focus
+      } else {
+        win.show()
+        win.focus()
+      }
       win.webContents.send(IPC.windowShown)
       if (widget) win.webContents.send(IPC.launcherOpenWidget, widget)
       if (openSettings) win.webContents.send(IPC.launcherOpenSettings, { section })

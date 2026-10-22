@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ACTIONS } from '@shared/actionRegistry'
+import { AI_PROVIDERS } from '@shared/settings'
 import { api } from '../api'
 import { useStore } from '../store/useStore'
 import {
@@ -103,6 +104,37 @@ function General() {
   )
 }
 
+/** Switching provider also resets Base URL / Model to that provider's defaults. */
+function ProviderRow() {
+  const [value, , error] = useSetting('aiProvider')
+  const change = async (next) => {
+    const d = AI_PROVIDERS[next]
+    const st = useStore.getState()
+    await st.setSetting('aiProvider', next)
+    await st.setSetting('aiBaseUrl', d.baseUrl)
+    await st.setSetting('aiModel', d.model)
+  }
+  return (
+    <Row
+      label="Provider"
+      desc={
+        value === 'openjev'
+          ? 'A classifier: picks the best tool as you type; Cast fills in the details locally.'
+          : 'Any OpenAI-compatible chat endpoint (OpenAI, OpenRouter, Ollama, LM Studio…).'
+      }
+      error={error}
+    >
+      <select className={styles.select} value={value} onChange={(e) => change(e.target.value)}>
+        {Object.entries(AI_PROVIDERS).map(([id, p]) => (
+          <option key={id} value={id}>
+            {p.name}
+          </option>
+        ))}
+      </select>
+    </Row>
+  )
+}
+
 function Suggestions({ secrets, refreshSecrets }) {
   const [test, setTest] = useState(null)
   const [testing, setTesting] = useState(false)
@@ -121,16 +153,17 @@ function Suggestions({ secrets, refreshSecrets }) {
       <ToggleRow
         settingKey="smartSuggestions"
         label="Enable smart suggestions"
-        desc="Sends the typed query (plus date/time and locale) to your AI provider. Nothing else."
+        desc="Sends what you type (nothing else) to your AI provider so Cast can suggest the best tool."
       />
-      <SectionTitle>AI provider (OpenAI-compatible)</SectionTitle>
-      <TextRow settingKey="aiBaseUrl" label="Base URL" placeholder="https://api.openai.com/v1" />
-      <TextRow settingKey="aiModel" label="Model" placeholder="gpt-4o-mini" />
+      <SectionTitle>AI provider</SectionTitle>
+      <ProviderRow />
+      <TextRow settingKey="aiBaseUrl" label="Base URL" />
+      <TextRow settingKey="aiModel" label="Model" />
       <SecretRow
         name="aiApiKey"
         label="API key"
         desc="Encrypted with the macOS Keychain. Never shown again."
-        placeholder="sk-…"
+        placeholder="Paste your API key"
         configured={secrets.aiApiKey}
         onChanged={refreshSecrets}
       />
@@ -157,6 +190,11 @@ function Suggestions({ secrets, refreshSecrets }) {
         ]}
       />
       <ToggleRow settingKey="showRecentOnEmpty" label="Show recent actions when empty" />
+      <ToggleRow
+        settingKey="learnFromChoices"
+        label="Learn from my choices"
+        desc="Ranks the action you usually pick for similar input higher. Stores only a coarse pattern (like “remind me”), never what you typed."
+      />
     </>
   )
 }
@@ -186,8 +224,21 @@ function Actions() {
         number
         narrow
       />
+      <SectionTitle>Pomodoro</SectionTitle>
+      <TextRow settingKey="pomodoroFocusMinutes" label="Focus (minutes)" number narrow />
+      <TextRow settingKey="pomodoroShortBreakMinutes" label="Short break (minutes)" number narrow />
+      <TextRow settingKey="pomodoroLongBreakMinutes" label="Long break (minutes)" number narrow />
+      <TextRow settingKey="pomodoroCycles" label="Rounds before the long break" number narrow />
+      <SectionTitle>Clipboard</SectionTitle>
+      <ToggleRow
+        settingKey="clipboardHistory"
+        label="Keep clipboard history"
+        desc="Remembers your last 50 copied texts in memory only (nothing is saved, it clears when you quit). Items copied from password managers are skipped."
+      />
       <SectionTitle>Actions</SectionTitle>
-      {ACTIONS.filter((a) => a.id !== 'record.stop').map((a) => (
+      {ACTIONS.filter(
+        (a) => !['record.stop', 'snippet.copy', 'currency.convert'].includes(a.id)
+      ).map((a) => (
         <Row key={a.id} label={a.title} desc={a.description}>
           <button
             className={styles.star}
@@ -297,7 +348,25 @@ function Capture() {
         ]}
       />
       <ToggleRow settingKey="copyScreenshotToClipboard" label="Copy screenshots to clipboard" />
+      <SelectRow
+        settingKey="screenshotAfter"
+        label="After a screenshot"
+        desc="“Open in Preview” lets you crop and mark it up."
+        options={[
+          ['none', 'Do nothing'],
+          ['preview', 'Open in Preview']
+        ]}
+      />
       <TextRow settingKey="recordingFolder" label="Recording folder" />
+      <SelectRow
+        settingKey="recordingFormat"
+        label="Recording format"
+        desc="MP4 plays everywhere (converted after you stop). WebM is kept as-is."
+        options={[
+          ['mp4', 'MP4'],
+          ['webm', 'WebM']
+        ]}
+      />
       <ToggleRow
         settingKey="recordMic"
         label="Include microphone audio"
@@ -366,6 +435,25 @@ function Privacy() {
         label="Keep action history"
         desc="Stores only the action you chose (never keystrokes) to power Recent and ranking."
       />
+      <Row
+        label="Clear learned preferences"
+        desc="Forgets which actions you usually pick for each kind of input."
+      >
+        <ConfirmButton
+          label="Clear"
+          onConfirm={async () => (
+            await api.history.clearLearned(),
+            useStore.getState().refreshHistory(),
+            toast('Learned preferences cleared')
+          )}
+        />
+      </Row>
+      <Row label="Clear clipboard history">
+        <ConfirmButton
+          label="Clear"
+          onConfirm={async () => (await api.clipboard.clear(), toast('Clipboard history cleared'))}
+        />
+      </Row>
       <Row label="Clear action history">
         <ConfirmButton
           label="Clear"
@@ -449,6 +537,15 @@ function Permissions() {
 
 function About() {
   const [info, setInfo] = useState(null)
+  const [showLogs, setShowLogs] = useState(false)
+  const [logs, setLogs] = useState('')
+  useEffect(() => {
+    if (showLogs)
+      api.app
+        .logs()
+        .then(setLogs)
+        .catch(() => setLogs('Could not read the log.'))
+  }, [showLogs])
   useEffect(
     () =>
       void api.app
@@ -466,10 +563,14 @@ function About() {
         </button>
       </Row>
       <Row label="Logs" desc="Rotating log file (no queries or secrets).">
+        <button className={styles.btn} onClick={() => setShowLogs((v) => !v)}>
+          {showLogs ? 'Hide' : 'View'}
+        </button>
         <button className={styles.btn} onClick={() => api.app.openPath('logs')}>
           Reveal
         </button>
       </Row>
+      {showLogs && <pre className={styles.logs}>{logs || 'No log entries yet.'}</pre>}
     </>
   )
 }

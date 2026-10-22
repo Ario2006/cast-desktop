@@ -205,3 +205,50 @@ describe('registry integrity', () => {
     expect(isEnabled(getAction('record.start'), DEFAULT_SETTINGS, { recording: true })).toBe(false)
   })
 })
+
+describe('fuzzy strictness', () => {
+  it('short queries do not match loosely ("sig" ≠ "session")', () => {
+    const ids = top('sig').map((r) => r.actionId)
+    expect(ids).not.toContain('pomodoro.start')
+  })
+  it('new actions are reachable', () => {
+    expect(top('pomodoro')[0].actionId).toBe('pomodoro.start')
+    expect(top('agenda')[0]).toMatchObject({
+      actionId: 'calendar.agenda',
+      params: { day: 'today' }
+    })
+    expect(top("tomorrow's schedule")[0]).toMatchObject({
+      actionId: 'calendar.agenda',
+      params: { day: 'tomorrow' }
+    })
+    expect(top('clipboard')[0].actionId).toBe('clipboard.history')
+    expect(top('; sig')[0]).toMatchObject({ actionId: 'snippets.open', params: { query: 'sig' } })
+    expect(top('snippets')[0].actionId).toBe('snippets.open')
+  })
+  it('currency conversions parse locally and outrank the web fallback', () => {
+    const [first] = top('100 usd to eur')
+    expect(first).toMatchObject({
+      actionId: 'currency.convert',
+      params: { amount: 100, from: 'USD', to: 'EUR' },
+      copies: true
+    })
+  })
+  it('rows can be overridden by live results (same key) without duplicating', () => {
+    const local = localSuggestions('100 usd to eur', ctx()).find(
+      (r) => r.actionId === 'currency.convert'
+    )
+    const live = { ...local, override: true, title: '= 89.25 EUR', source: 'rates' }
+    const merged = rank([local, live])
+    expect(merged.filter((r) => r.actionId === 'currency.convert')).toHaveLength(1)
+    expect(merged.find((r) => r.actionId === 'currency.convert').title).toBe('= 89.25 EUR')
+  })
+  it('learned choices lift the usual action for that input shape', () => {
+    const rows = localSuggestions('note milk', ctx()).map((r) => ({
+      ...r,
+      learned: r.actionId === 'notes.search' ? 1 : 0
+    }))
+    const plain = rank(localSuggestions('note milk', ctx())).map((r) => r.actionId)
+    const learned = rank(rows).map((r) => r.actionId)
+    expect(learned.indexOf('notes.search')).toBeLessThanOrEqual(plain.indexOf('notes.search'))
+  })
+})

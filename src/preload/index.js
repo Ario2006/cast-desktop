@@ -24,13 +24,38 @@ contextBridge.exposeInMainWorld('cast', {
     ai: (input, requestId) => invoke(IPC.suggestAi, { input, requestId }),
     cancel: (requestId) => send(IPC.suggestCancel, { requestId }),
     files: (query) => invoke(IPC.suggestFiles, { query }),
-    notes: (query) => invoke(IPC.suggestNotes, { query })
+    notes: (query) => invoke(IPC.suggestNotes, { query }),
+    snippets: (query) => invoke(IPC.suggestSnippets, { query })
   },
   history: {
     stats: () => invoke(IPC.historyStats),
     recent: () => invoke(IPC.historyRecent),
     record: (actionId, summary) => invoke(IPC.historyRecord, { actionId, summary }),
-    clear: () => invoke(IPC.historyClear)
+    clear: () => invoke(IPC.historyClear),
+    learned: () => invoke(IPC.historyLearned),
+    learn: (shape, actionId) => invoke(IPC.historyLearn, { shape, actionId }),
+    clearLearned: () => invoke(IPC.historyClearLearned)
+  },
+  pomodoro: {
+    get: () => invoke(IPC.pomodoroGet),
+    start: () => invoke(IPC.pomodoroStart),
+    skip: () => invoke(IPC.pomodoroSkip),
+    stop: () => invoke(IPC.pomodoroStop)
+  },
+  clipboard: {
+    list: (query) => invoke(IPC.clipboardList, { query }),
+    copy: (id) => invoke(IPC.clipboardCopy, { id }),
+    clear: () => invoke(IPC.clipboardClear)
+  },
+  snippets: {
+    list: (query) => invoke(IPC.snippetsList, { query }),
+    create: (p) => invoke(IPC.snippetsCreate, p),
+    update: (p) => invoke(IPC.snippetsUpdate, p),
+    delete: (id) => invoke(IPC.snippetsDelete, { id }),
+    copy: (id) => invoke(IPC.snippetsCopy, { id })
+  },
+  currency: {
+    convert: (amount, from, to) => invoke(IPC.currencyConvert, { amount, from, to })
   },
   actions: {
     run: (actionId, params) => invoke(IPC.actionRun, { actionId, params })
@@ -66,7 +91,8 @@ contextBridge.exposeInMainWorld('cast', {
     calendars: () => invoke(IPC.calendarCalendars),
     conflicts: (p) => invoke(IPC.calendarConflicts, p),
     create: (p) => invoke(IPC.calendarCreate, p),
-    undo: (eventId, calendarId) => invoke(IPC.calendarUndo, { eventId, calendarId })
+    undo: (eventId, calendarId) => invoke(IPC.calendarUndo, { eventId, calendarId }),
+    agenda: (day) => invoke(IPC.calendarAgenda, { day })
   },
   capture: {
     start: (kind, options) => invoke(IPC.captureStart, { kind, options }),
@@ -91,6 +117,7 @@ contextBridge.exposeInMainWorld('cast', {
   app: {
     info: () => invoke(IPC.appInfo),
     openPath: (target) => invoke(IPC.appOpenPath, { target }),
+    logs: () => invoke(IPC.appLogs),
     copy: (text) => invoke(IPC.clipboardWrite, { text })
   }
 })

@@ -16,6 +16,7 @@ Full specification: [`app-spec.md`](./app-spec.md).
 npm install
 npm run dev        # launch with hot reload (menu-bar icon appears; press ⌥ Space)
 npm test           # unit tests (Vitest)
+npm run test:e2e   # builds, then drives the real app with Playwright
 npm run lint
 npm run pack       # unsigned Cast.app in dist/mac-<arch>/
 npm run dist       # + .dmg for arm64 and x64
@@ -39,16 +40,37 @@ Requires macOS and Node 20+. The first launch of an unsigned build needs right-c
 | `screenshot`, `record screen`                  | Full / area / window capture; screen recording with menu-bar indicator                                    |
 | `note buy milk`, `n: …`, `notes <query>`       | Quick notes with autosave and full-text search                                                            |
 | `~/Documents`, a file or app name, `open …`    | Open (**↵**) or reveal in Finder (**⌘↵**)                                                                 |
+| `pomodoro`                                     | Focus/break cycles (25/5, long break after 4) that run in the background and notify you at each switch    |
+| `agenda`, `tomorrow's schedule`                | Your Google Calendar day; ←/→ switches Today/Tomorrow                                                     |
+| `100 usd to eur`, `$50 in inr`                 | Live ECB exchange rates (cached, works offline with the last rates)                                       |
+| `clipboard`                                    | Searchable history of what you copied (opt-in, memory-only)                                               |
+| `;sig`, `snippets`                             | Saved text snippets: Enter copies, ⌘N new, ⌘E edit                                                        |
 | `g cats`, `yt lofi`, `ddg …`, any URL          | Web search / open URL                                                                                     |
 
 Keys: `↑↓` select · `↵` run · `⇥` complete · `⌘1…7` run Nth · `⎋` back / clear / hide · `⌘,` settings.
 
+### Editing in plain English
+
+Open widgets understand follow-ups: in a timer type “make it 30 min”, “add 5 min” or a label; in a calendar
+draft “move to 4pm”, “tomorrow 2pm”, “for 90 minutes”; on a reminder “tomorrow 9am”, “make it daily”
+(or use the Snooze menu).
+
+### It learns your habits
+
+If you always pick the same action for a kind of input (e.g. “remind me …” → Reminder), that action ranks
+higher next time. Only a coarse pattern is stored (letters of the first two words, numbers masked), never the
+text. Turn it off or clear it in Settings → Suggestions / Privacy.
+
 ## Configuration (⌘,)
 
-- **Smart suggestions (AI)** — any OpenAI-compatible endpoint (OpenAI, OpenRouter, Ollama, LM Studio…):
-  base URL, model, API key. The key is stored with Electron `safeStorage` (macOS Keychain) and is
-  never sent to the renderer. Only the typed text plus current time/timezone/locale is sent.
-  Local servers on `localhost` work without a key. With no key or no network, local suggestions keep working.
+- **Smart suggestions (AI)** — default provider is **Openjev** (TypeSafe AI "System One", `https://api.codiv.ai`,
+  model `jev-latest`), a _classifier_: as you type, Cast asks it which tool best fits the text and uses the
+  returned probabilities to rank up to four candidates. It never generates text; durations, times and
+  note/reminder text are filled in locally by Cast's own parsers. Paste your key in Settings → Suggestions →
+  API key (stored with Electron `safeStorage` / the macOS Keychain, never shown again, never sent to the
+  renderer) and press **Test**. Only the text you type is sent. An OpenAI-compatible provider
+  (OpenAI, OpenRouter, Ollama, LM Studio…) is available in the same panel. With no key or no network,
+  local suggestions keep working.
 - **Google Calendar** — create a _Desktop app_ OAuth client in Google Cloud Console (enable the Calendar API),
   paste the client ID (and secret, if shown) in Settings → Calendar, then **Connect**. Uses the system browser,
   loopback redirect and PKCE; tokens are encrypted with `safeStorage`.
@@ -92,9 +114,10 @@ CAST_SMOKE=1 CAST_USER_DATA=/tmp/cast-test CAST_SMOKE_OUT=/tmp/cast-out \
 
 ## Deviations from the spec / decisions to confirm
 
-- **AI provider** — the spec's "Openjev / codiv API" is unspecified (§16 Q1). Cast ships a provider-agnostic
-  OpenAI-compatible provider behind the `AIProvider` interface (`src/main/ai/provider.js`); another provider
-  is one file.
+- **AI provider** — Openjev is a classifier, so the spec's JSON-intent prompt (Appendix B) is only used by the
+  optional OpenAI-compatible provider. For Openjev, `src/main/ai/providers/openjev.js` sends one `choice`
+  question (a label per tool, described by each action's `aiHint`) and `src/shared/inferParams.js` builds the
+  parameters. The `AIProvider` interface (`src/main/ai/provider.js`) still lets you add another provider in one file.
 - **Visual design** — a light-only, soft-minimal design system (pastel blue→ivory stage, floating white card,
   pill input, quiet result cards, Inter via `@fontsource-variable/inter`). All tokens live in
   `src/renderer/styles/theme.css`. The window is frameless and _transparent_; card, frame and shadow are CSS.
@@ -103,9 +126,12 @@ CAST_SMOKE=1 CAST_USER_DATA=/tmp/cast-test CAST_SMOKE_OUT=/tmp/cast-out \
 - **Google Calendar** uses the REST API via `fetch` instead of the `googleapis` package (smaller, same endpoints).
 - **Action history** defaults to **on** (stores only the chosen action's title, never keystrokes) so "Recent"
   works out of the box; toggle in Settings → Privacy (§16 Q6).
-- **Recording** outputs `.webm` (MediaRecorder); mp4 remux is the v1.1 item from the spec.
-- Not implemented (v1.1 backlog or optional in the spec): currency conversion, Pomodoro, clipboard history,
-  the "Ask AI" no-match row, dragging the window by the input bar.
+- **Recording** is captured as `.webm` (MediaRecorder) and converted to `.mp4` with the bundled ffmpeg when you stop
+  (the webm is kept if conversion fails; choose WebM in Settings → Capture to skip it).
+- v1.1 items now included: currency conversion, Pomodoro, clipboard history, snippets, agenda, mp4 conversion
+  (bundled ffmpeg), plus learning, natural-language edits, a welcome walkthrough and drag-to-move (footer / top edge).
+  Still not implemented: the "Ask AI" no-match row, a built-in screenshot editor (use Settings → Capture →
+  "Open in Preview" to crop/mark up) and auto-paste (needs the Accessibility permission).
 - Screenshots, screen recording, native notification buttons and the global shortcut's foreground behaviour
   need real macOS permissions/UI, so they are covered by logic tests and a startup check but should be
   eyeballed on your machine (see the manual checklist in spec §14).

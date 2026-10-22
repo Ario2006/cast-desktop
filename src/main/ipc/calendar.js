@@ -32,6 +32,22 @@ export function registerCalendar({ handle }, ctx) {
     return { connected: true }
   })
 
+  handle(
+    IPC.calendarAgenda,
+    s.obj({ day: s.opt(s.oneOf('today', 'tomorrow')) }),
+    async ({ day }) => {
+      const start = new Date()
+      start.setHours(0, 0, 0, 0)
+      if (day === 'tomorrow') start.setDate(start.getDate() + 1)
+      const end = new Date(start)
+      end.setDate(end.getDate() + 1)
+      const events = await ctx.google.calendar
+        .listAgenda({ start: start.toISOString(), end: end.toISOString() })
+        .catch(wrap)
+      return { day: day ?? 'today', date: start.toISOString(), events }
+    }
+  )
+
   handle(IPC.calendarDisconnect, null, () => ctx.google.auth.disconnect())
 
   handle(IPC.calendarCalendars, null, () => ctx.google.calendar.listCalendars().catch(wrap))

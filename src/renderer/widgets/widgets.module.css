@@ -1,25 +1,23 @@
 .widget {
-  padding: 6px 4px 2px;
+  padding: 4px 2px 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 12px;
 }
 .center {
   align-items: center;
   text-align: center;
 }
 
-/* ---- big readouts --------------------------------------------------------------------------- */
+/* ---- readouts ------------------------------------------------------------------------------- */
 .clock {
-  font-size: 76px;
+  font-size: 52px;
   font-weight: 500;
-  letter-spacing: -0.035em;
+  letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
   line-height: 1.05;
   color: var(--text);
-  transition:
-    color var(--ease),
-    opacity var(--ease);
+  transition: color var(--ease);
 }
 .clock[data-done='true'] {
   color: var(--danger);
@@ -28,16 +26,16 @@
   color: var(--placeholder);
 }
 .clockSm {
-  font-size: 44px;
+  font-size: 34px;
 }
 .sub {
   color: var(--text-2);
-  font-size: 15px;
+  font-size: 12.5px;
   font-weight: 500;
 }
 .progress {
   width: 100%;
-  height: 6px;
+  height: 3px;
   border-radius: var(--r-pill);
   background: #eef1f6;
   overflow: hidden;
@@ -50,30 +48,28 @@
   transition: width 0.25s linear;
 }
 
-/* ---- buttons: secondary = white pill, primary = blue pill ----------------------------------- */
+/* ---- buttons ---------------------------------------------------------------------------------- */
 .controls {
   display: flex;
-  gap: 10px;
+  gap: 6px;
   flex-wrap: wrap;
   justify-content: center;
 }
 .btn {
   border: 1px solid var(--border);
   border-radius: var(--r-pill);
-  padding: 11px 20px;
+  padding: 6px 13px;
   background: var(--surface);
   color: #374151;
-  font-weight: 560;
-  font-size: 15px;
+  font-weight: 540;
+  font-size: 12.5px;
   display: inline-flex;
-  gap: 10px;
+  gap: 7px;
   align-items: center;
-  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
   transition:
     background var(--ease),
     border-color var(--ease),
-    box-shadow var(--ease),
-    color var(--ease);
+    box-shadow var(--ease);
 }
 .btn:hover {
   background: #f9fafb;
@@ -83,9 +79,9 @@
   background: var(--icon-surface);
 }
 .btn kbd {
-  font: 600 11px/1 var(--font);
-  padding: 3px 7px;
-  border-radius: 7px;
+  font: 600 10px/1 var(--font);
+  padding: 2px 5px;
+  border-radius: 5px;
   background: var(--icon-surface);
   color: var(--text-2);
 }
@@ -93,7 +89,6 @@
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 6px 16px -6px rgba(75, 123, 255, 0.55);
 }
 .primary:hover {
   background: var(--accent-hover);
@@ -117,60 +112,55 @@
 .btn:disabled {
   opacity: 0.45;
   pointer-events: none;
-  box-shadow: none;
 }
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px var(--accent-ring);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 
 .presets {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
+  gap: 6px;
 }
 .preset {
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--r-pill);
-  padding: 13px 0;
-  background: var(--surface);
-  font-size: 16px;
-  font-weight: 560;
+  padding: 8px 0;
+  background: var(--icon-surface);
+  font-size: 13px;
+  font-weight: 540;
   color: var(--text);
-  box-shadow: var(--shadow-card);
   transition:
     background var(--ease),
-    border-color var(--ease),
     color var(--ease);
 }
 .preset:hover {
   background: var(--accent-pale);
-  border-color: #c7d6ff;
   color: var(--accent);
 }
 
-/* ---- form fields ---------------------------------------------------------------------------- */
+/* ---- fields ----------------------------------------------------------------------------------- */
 .field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
   min-width: 0;
 }
 .label {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 560;
   color: var(--text-2);
-  letter-spacing: 0.01em;
 }
 .text,
 .select {
   width: 100%;
-  height: 52px;
+  height: 38px;
   border: 1px solid var(--border);
   background: var(--surface);
   border-radius: var(--r-field);
-  padding: 0 18px;
-  font-size: 16px;
+  padding: 0 13px;
+  font-size: 13.5px;
   color: var(--text-input);
   outline: none;
   transition:
@@ -179,11 +169,11 @@
 }
 .select {
   appearance: none;
-  padding-right: 40px;
+  padding-right: 32px;
   cursor: default;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 16px center;
+  background-position: right 12px center;
 }
 .text:hover,
 .select:hover,
@@ -194,18 +184,18 @@
 .select:focus,
 .area:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 4px var(--accent-ring);
+  box-shadow: 0 0 0 3px var(--accent-ring);
 }
 .area {
   width: 100%;
-  min-height: 170px;
-  max-height: 300px;
+  min-height: 120px;
+  max-height: 240px;
   resize: none;
   border: 1px solid var(--border);
   background: var(--surface);
-  border-radius: 24px;
-  padding: 18px 20px;
-  font-size: 16px;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--text-input);
   outline: none;
@@ -216,31 +206,31 @@
 .grid {
   display: grid;
   grid-template-columns: 1.3fr 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 .grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 10px;
 }
 .inline {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 .status {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-2);
 }
 .warn {
-  font-size: 14px;
+  font-size: 12.5px;
   color: var(--warn);
   background: var(--warn-pale);
-  padding: 11px 16px;
-  border-radius: 16px;
+  padding: 7px 12px;
+  border-radius: 12px;
 }
 .err {
-  font-size: 14px;
+  font-size: 12.5px;
   color: var(--danger);
 }
 .ok {
@@ -252,35 +242,36 @@
 .check {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-size: 15px;
+  gap: 7px;
+  font-size: 13px;
   color: var(--text);
 }
 .check input[type='checkbox'] {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--accent);
 }
 
-/* ---- laps + result cards ---------------------------------------------------------------------- */
+/* ---- laps + results ------------------------------------------------------------------------------ */
 .laps {
   width: 100%;
-  max-height: 150px;
+  max-height: 110px;
   overflow-y: auto;
   font-variant-numeric: tabular-nums;
-  font-size: 15px;
+  font-size: 12.5px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 2px;
 }
 .lap {
   display: flex;
   justify-content: space-between;
-  padding: 11px 18px;
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: var(--surface);
+  padding: 6px 12px;
+  border-radius: 10px;
   color: var(--text-body);
+}
+.lap:nth-child(odd) {
+  background: #f8f9fb;
 }
 .lap span:last-child {
   color: var(--text);
@@ -291,35 +282,25 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 300px;
+  max-height: 240px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
 }
 .result {
-  padding: 14px 18px;
-  border: 1px solid var(--border);
+  padding: 8px 12px;
   border-radius: var(--r-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  transition:
-    border-color var(--ease),
-    background var(--ease);
+  transition: background var(--ease);
 }
 .result[aria-selected='true'] {
-  background: #f7f9ff;
-  border-color: #c7d6ff;
-  box-shadow:
-    0 0 0 3px rgba(75, 123, 255, 0.08),
-    var(--shadow-card);
+  background: #f1f5ff;
 }
 .resultTitle {
-  font-size: 17px;
-  font-weight: 560;
+  font-size: 14px;
+  font-weight: 540;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
@@ -327,38 +308,144 @@
 }
 .resultSub {
   color: var(--text-2);
-  font-size: 14px;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-/* ---- confirmation states -------------------------------------------------------------------------- */
+/* ---- confirmation ---------------------------------------------------------------------------------- */
 .success {
   display: flex;
-  gap: 18px;
+  gap: 12px;
   align-items: center;
-  padding: 20px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-card);
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  padding: 4px 2px;
 }
 .successIcon {
-  width: 52px;
-  height: 52px;
-  border-radius: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   background: var(--accent-pale);
   color: var(--accent);
   display: grid;
   place-items: center;
   flex: none;
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 600;
 }
 .big {
-  font-size: 22px;
+  font-size: 16px;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.01em;
   color: var(--text);
+}
+
+/* ---- pomodoro / segmented control / events ---------------------------------------------------------- */
+.dots {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e3e6ec;
+  transition: background var(--ease);
+}
+.dot[data-state='done'] {
+  background: var(--accent);
+}
+.dot[data-state='current'] {
+  background: var(--accent-pale);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+.phase {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.phase[data-break='true'] {
+  color: var(--success);
+}
+.segmented {
+  display: inline-flex;
+  padding: 3px;
+  gap: 2px;
+  border-radius: var(--r-pill);
+  background: var(--icon-surface);
+  align-self: flex-start;
+}
+.segmented button {
+  border: 0;
+  background: transparent;
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: 12.5px;
+  font-weight: 540;
+  color: var(--text-body);
+  transition:
+    background var(--ease),
+    color var(--ease);
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.12);
+}
+.event {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border-radius: var(--r-card);
+  transition: background var(--ease);
+}
+.event:hover {
+  background: #f8f9fb;
+}
+.eventTime {
+  flex: none;
+  width: 92px;
+  font-size: 12px;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.eventMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.empty {
+  text-align: center;
+  color: var(--text-body);
+  padding: 18px 0 10px;
+  font-size: 13px;
+}
+.note {
+  font-size: 12px;
+  color: var(--text-2);
+  line-height: 1.5;
+}
+.rowActions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.linkBtn {
+  border: 0;
+  background: none;
+  font-size: 12px;
+  color: var(--text-2);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+.linkBtn:hover {
+  background: var(--icon-surface);
+  color: var(--text);
+}
+.quick {
+  width: 100%;
 }

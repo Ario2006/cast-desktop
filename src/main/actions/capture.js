@@ -68,6 +68,8 @@ export function createScreenshotter({
       if (!img.isEmpty()) clipboard.writeImage(img)
     }
     capturesRepo.insert({ kind: 'screenshot', path: file })
+    // Preview gives crop / markup / annotate for free
+    if (settings.screenshotAfter === 'preview') shell.openPath(file)
     notify({
       title: 'Screenshot saved',
       body: file.replace(process.env.HOME ?? '', '~'),

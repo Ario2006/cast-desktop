@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { getAction, makeSuggestion } from '@shared/actionRegistry'
 import { DEFAULT_SETTINGS } from '@shared/settings'
+import { inputShape, learnedBoost } from '@shared/inputShape'
 import { rank } from '@shared/ranking'
 import { localSuggestions } from '@shared/suggest'
 import { api } from '../api'
@@ -10,15 +11,28 @@ const OUT_MS = 80
 const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /** Widgets that keep running state in main and stay on screen when the launcher is reopened. */
-const PINNED_WIDGETS = new Set(['timer.start', 'stopwatch.start'])
+const PINNED_WIDGETS = new Set(['timer.start', 'stopwatch.start', 'pomodoro.start'])
+const EMPTY_PARTS = { local: [], files: [], notes: [], ai: [], rates: [], snippets: [] }
 
 function buildSuggestions(state, parts = state.parts) {
   if (!state.query.trim())
     return state.settings.showRecentOnEmpty
       ? emptyStateRows(state)
       : emptyStateRows({ ...state, recents: [] })
-  const list = [...parts.local, ...parts.files, ...parts.notes, ...parts.ai]
-  return rank(list, { stats: state.stats, max: state.settings.maxResults })
+  const list = [
+    ...parts.local,
+    ...parts.files,
+    ...parts.notes,
+    ...parts.snippets,
+    ...parts.rates,
+    ...parts.ai
+  ]
+  // "learned": a small boost for what you usually pick for this kind of input (never the text itself)
+  const counts = state.learned[inputShape(state.query)]
+  const annotated = counts
+    ? list.map((r) => ({ ...r, learned: learnedBoost(counts[r.actionId] ?? 0) }))
+    : list
+  return rank(annotated, { stats: state.stats, max: state.settings.maxResults })
 }
 
 /** Pick a selection index after the list changed: keep the user's row if they navigated. */
@@ -35,7 +49,7 @@ export const useStore = create((set, get) => ({
   view: 'launcher', // 'launcher' | 'settings'
   settingsSection: 'general',
   query: '',
-  parts: { local: [], files: [], notes: [], ai: [] },
+  parts: EMPTY_PARTS,
   suggestions: [],
   selected: 0,
   userMoved: false,
@@ -43,6 +57,8 @@ export const useStore = create((set, get) => ({
   permissionCard: null,
   settings: DEFAULT_SETTINGS,
   stats: {},
+  learned: {},
+  pomodoro: null,
   recents: [],
   timers: [],
   finishedTimers: {},
@@ -61,17 +77,23 @@ export const useStore = create((set, get) => ({
       api.timers.list(),
       api.status.get()
     ])
-    set({ settings, timers, status })
+    // first run: show the walkthrough (don't rely on the 'shown' event, which can beat this listener)
+    set({ settings, timers, status, ...(settings.onboarded ? {} : { view: 'welcome' }) })
+    api.pomodoro
+      .get()
+      .then((pomodoro) => set({ pomodoro }))
+      .catch(() => {})
     get().refreshHistory()
     get().recompute()
   },
 
   async refreshHistory() {
-    const [stats, recents] = await Promise.all([
+    const [stats, recents, learned] = await Promise.all([
       api.history.stats().catch(() => ({})),
-      api.history.recent().catch(() => [])
+      api.history.recent().catch(() => []),
+      api.history.learned().catch(() => ({}))
     ])
-    set({ stats, recents })
+    set({ stats, recents, learned })
     get().recompute()
   },
 
@@ -86,7 +108,7 @@ export const useStore = create((set, get) => ({
     const s = get()
     if (s.activeWidget) set({ activeWidget: null })
     const local = query.trim() ? localSuggestions(query, get().ctx()) : []
-    const parts = { local, files: [], notes: [], ai: [] }
+    const parts = { ...EMPTY_PARTS, local }
     const next = buildSuggestions({ ...get(), query }, parts)
     set({
       query,
@@ -146,7 +168,11 @@ export const useStore = create((set, get) => ({
 
   // --- window lifecycle -------------------------------------------------------------------
   onShown() {
-    set((s) => ({ animToken: s.animToken + 1, leaving: false }))
+    set((s) => ({
+      animToken: s.animToken + 1,
+      leaving: false,
+      ...(s.settings.onboarded ? {} : { view: 'welcome' })
+    }))
     get().refreshHistory()
     api.status
       .get()
@@ -159,10 +185,10 @@ export const useStore = create((set, get) => ({
     const w = get().activeWidget
     const keep = w && PINNED_WIDGETS.has(w.actionId) && w.params?.timerId
     set({
-      view: 'launcher',
+      view: get().settings.onboarded ? 'launcher' : 'welcome',
       leaving: false,
       query: '',
-      parts: { local: [], files: [], notes: [], ai: [] },
+      parts: EMPTY_PARTS,
       permissionCard: null,
       toast: null,
       aiPending: false,
@@ -184,6 +210,7 @@ export const useStore = create((set, get) => ({
       ? { ...get().finishedTimers, [snapshot.finished.id]: snapshot.finished }
       : get().finishedTimers
     set({
+      pomodoro: snapshot.pomodoro === undefined ? get().pomodoro : snapshot.pomodoro,
       timers: snapshot.timers ?? get().timers,
       reminders: snapshot.reminders ?? get().reminders,
       finishedTimers

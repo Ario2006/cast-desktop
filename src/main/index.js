@@ -12,11 +12,16 @@ import {
 import { IPC } from '../shared/constants.js'
 import { validateSetting } from '../shared/settings.js'
 import { createScreenshotter } from './actions/capture.js'
+import ffmpegStatic from 'ffmpeg-static'
+import { toMp4, unpackedPath } from './actions/convert.js'
 import { warmApps } from './actions/files.js'
 import { createActionRunner } from './actions/index.js'
 import { createRecorder } from './actions/recording.js'
 import { createAiService } from './ai/service.js'
+import { createClipboardHistory } from './clipboardHistory.js'
+import { createCurrencyService } from './currency.js'
 import { openDb } from './db/index.js'
+import { choicesRepo, snippetsRepo } from './db/features.js'
 import { capturesRepo, historyRepo } from './db/history.js'
 import { notesRepo } from './db/notes.js'
 import { createCalendarClient } from './google/calendar.js'
@@ -66,6 +71,8 @@ function boot(setWindows, encryptionAvailable) {
   const notes = notesRepo(db)
   const history = historyRepo(db)
   const captures = capturesRepo(db)
+  const choices = choicesRepo(db)
+  const snippets = snippetsRepo(db)
   const secrets = createSecretStore({
     file: join(dataDir, 'secrets.bin'),
     safeStorage,
@@ -108,6 +115,10 @@ function boot(setWindows, encryptionAvailable) {
 
   const notify = (opts) => showNotification(opts)
 
+  const currency = createCurrencyService({ file: join(dataDir, 'rates.json'), log })
+  const clipboardHistory = createClipboardHistory({ clipboard })
+  const ffmpeg = unpackedPath(ffmpegStatic)
+
   const screenshot = createScreenshotter({
     getSettings: settings.all,
     systemPreferences,
@@ -128,6 +139,7 @@ function boot(setWindows, encryptionAvailable) {
     hideLauncher: () => windows.hide(),
     notify,
     log,
+    convertToMp4: (input, output) => toMp4({ ffmpeg, input, output }),
     recorderPage: {
       preload: join(__dirname, '../preload/recorder.js'),
       url: rendererUrl('recorder.html')
@@ -140,18 +152,36 @@ function boot(setWindows, encryptionAvailable) {
     }
   })
 
-  const runner = createActionRunner({ getSettings: settings.all, screenshot, recorder })
+  const runner = createActionRunner({
+    getSettings: settings.all,
+    screenshot,
+    recorder,
+    currency,
+    snippets
+  })
 
   scheduler = createScheduler({
     db,
+    getPomodoroConfig: () => {
+      const s = settings.all()
+      return {
+        focus: s.pomodoroFocusMinutes,
+        short: s.pomodoroShortBreakMinutes,
+        long: s.pomodoroLongBreakMinutes,
+        cycles: s.pomodoroCycles
+      }
+    },
     notify: (n) => {
       const s = settings.all()
-      if (n.kind === 'timer') {
+      if (n.kind === 'timer' || n.kind === 'pomodoro') {
         showNotification({
           title: n.title,
           body: n.body,
           sound: s.timerSound,
-          onClick: () => openWidget('timer.start', { timerId: n.timerId })
+          onClick: () =>
+            n.kind === 'pomodoro'
+              ? openWidget('pomodoro.start', {})
+              : openWidget('timer.start', { timerId: n.timerId })
         })
         tray.flash()
       } else {
@@ -191,10 +221,15 @@ function boot(setWindows, encryptionAvailable) {
           }
         }
         break
+      case 'clipboardHistory':
+        if (value) clipboardHistory.start()
+        else clipboardHistory.stop()
+        break
       case 'trayTimerTitle':
         tray?.refresh()
         break
       case 'smartSuggestions':
+      case 'aiProvider':
       case 'aiBaseUrl':
       case 'aiModel':
         if (windows?.webContents) emitStatus()
@@ -261,6 +296,10 @@ function boot(setWindows, encryptionAvailable) {
     secretsStatus,
     notes,
     history,
+    choices,
+    snippets,
+    currency,
+    clipboardHistory,
     scheduler,
     ai,
     google,
@@ -271,10 +310,16 @@ function boot(setWindows, encryptionAvailable) {
     currentStatus
   })
 
+  // Test / dev hook: CAST_SETTINGS='{"onboarded":true}' overrides settings for this run.
+  if (process.env.CAST_SETTINGS) {
+    for (const [k, v] of Object.entries(JSON.parse(process.env.CAST_SETTINGS))) setSetting(k, v)
+  }
+
   scheduler.init()
   powerMonitor.on('resume', () => scheduler.onResume())
   powerMonitor.on('unlock-screen', () => scheduler.onResume())
   applySetting('launchAtLogin', settings.get('launchAtLogin'))
+  applySetting('clipboardHistory', settings.get('clipboardHistory'))
   warmApps()
 
   // Finalize an in-progress recording before quitting so the file stays playable.
@@ -291,6 +336,10 @@ function boot(setWindows, encryptionAvailable) {
     tray.destroy()
     db.close()
   })
+
+  // First run: open the launcher once so the welcome walkthrough is the first thing you see.
+  if (!settings.get('onboarded') && !process.env.CAST_SMOKE) setTimeout(() => windows.show(), 700)
+  if (process.env.CAST_E2E) windows.show()
 
   if (process.env.CAST_SMOKE) {
     import('./smoke.js').then((m) => m.runSmoke({ windows, log, app, setSetting }))

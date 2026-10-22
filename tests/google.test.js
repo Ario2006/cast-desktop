@@ -195,15 +195,13 @@ describe('Calendar client', () => {
   const client = (fetch) => createCalendarClient({ auth, fetch })
 
   it('inserts events with timezone, attendees and a Meet request', async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        json({
-          id: 'ev1',
-          htmlLink: 'https://www.google.com/calendar/event?eid=1',
-          hangoutLink: 'https://meet.google.com/abc'
-        })
-      )
+    const fetch = vi.fn().mockResolvedValue(
+      json({
+        id: 'ev1',
+        htmlLink: 'https://www.google.com/calendar/event?eid=1',
+        hangoutLink: 'https://meet.google.com/abc'
+      })
+    )
     const r = await client(fetch).insertEvent({
       title: 'Dentist',
       start: '2026-10-23T09:30:00.000Z',

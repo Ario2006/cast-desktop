@@ -1,5 +1,6 @@
 import * as s from './validate.js'
 import { evaluateMath, convertUnits } from './calc.js'
+import { formatMoney, parseCurrency } from './currency.js'
 import { durationPhrase, formatDuration, parseTimerInput } from './durations.js'
 import {
   buildSearchUrl,
@@ -19,6 +20,7 @@ import { formatWhen, parseEvent, parseReminder, parseWhenOnly } from './timepars
  *  parse(input, ctx) -> { params, confidence } | null     optional local parser
  *  describe(params, ctx) -> { title, subtitle }           row text for a given param set
  *  copies        true when Enter copies a result to the clipboard
+ *  aiHint        one-line description the AI classifier sees for this action (omit to hide it from AI)
  *
  * ctx: { now: Date, settings, recording: boolean }
  */
@@ -30,6 +32,7 @@ const oneLine = (t = '', max = 60) => (t.length > max ? `${t.slice(0, max - 1)}�
 export const ACTIONS = [
   {
     id: 'timer.start',
+    aiHint: "Start a countdown timer for some length of time, e.g. '25 minutes' or 'pasta timer'.",
     title: 'Start timer',
     description: 'Countdown timer that keeps running in the background',
     keywords: ['timer', 'countdown', 'remind in', 'alarm'],
@@ -57,6 +60,7 @@ export const ACTIONS = [
   },
   {
     id: 'stopwatch.start',
+    aiHint: 'Start a stopwatch to count up or time laps.',
     title: 'Stopwatch',
     description: 'Start / lap / pause a stopwatch',
     keywords: ['stopwatch', 'lap', 'elapsed', 'chrono'],
@@ -72,6 +76,8 @@ export const ACTIONS = [
   },
   {
     id: 'calendar.create',
+    aiHint:
+      'Book, schedule or add a calendar event, meeting or appointment at a particular date and time.',
     title: 'New calendar event',
     description: 'Create a Google Calendar event',
     keywords: ['book', 'schedule', 'meeting', 'appointment', 'event', 'calendar'],
@@ -111,6 +117,7 @@ export const ACTIONS = [
   },
   {
     id: 'screenshot.full',
+    aiHint: 'Take a screenshot of the whole screen.',
     title: 'Screenshot: full screen',
     keywords: ['screenshot', 'capture screen', 'snap', 'screen grab'],
     aliases: ['capture full screen'],
@@ -125,6 +132,7 @@ export const ACTIONS = [
   },
   {
     id: 'screenshot.area',
+    aiHint: 'Take a screenshot of a selected region or part of the screen.',
     title: 'Screenshot: selected area',
     keywords: ['screenshot', 'capture area', 'snap', 'region', 'selection'],
     aliases: ['capture selection'],
@@ -136,6 +144,7 @@ export const ACTIONS = [
   },
   {
     id: 'screenshot.window',
+    aiHint: 'Take a screenshot of a single application window.',
     title: 'Screenshot: window',
     keywords: ['screenshot', 'capture window', 'snap'],
     aliases: ['capture window'],
@@ -147,6 +156,7 @@ export const ACTIONS = [
   },
   {
     id: 'record.start',
+    aiHint: 'Record the screen as a video (screen recording).',
     title: 'Record screen',
     description: 'Record the display to a video file',
     keywords: ['record screen', 'screen recording', 'capture video', 'record', 'screencast'],
@@ -173,6 +183,7 @@ export const ACTIONS = [
   },
   {
     id: 'note.create',
+    aiHint: 'Jot down or save a note, or remember a piece of text for later.',
     title: 'New note',
     description: 'Jot something down',
     keywords: ['note', 'jot', 'remember that', 'memo', 'write down'],
@@ -194,6 +205,7 @@ export const ACTIONS = [
   },
   {
     id: 'notes.search',
+    aiHint: "Find or search through the user's saved notes.",
     title: 'Search notes',
     keywords: ['search notes', 'find note', 'notes'],
     aliases: ['find notes'],
@@ -212,6 +224,7 @@ export const ACTIONS = [
   },
   {
     id: 'reminder.create',
+    aiHint: 'Remind the user to do something at a certain time or after a delay.',
     title: 'New reminder',
     description: 'Get a notification at a set time',
     keywords: ['remind me', 'reminder', 'remind', 'alert me'],
@@ -338,6 +351,7 @@ export const ACTIONS = [
   },
   {
     id: 'web.search',
+    aiHint: 'Search the web or look something up online, including general questions.',
     title: 'Search the web',
     keywords: ['search', 'google', 'web', 'duckduckgo', 'youtube'],
     aliases: [],
@@ -364,6 +378,7 @@ export const ACTIONS = [
   },
   {
     id: 'web.openUrl',
+    aiHint: 'Open a website, web address or URL in the browser.',
     title: 'Open URL',
     keywords: ['url', 'open url', 'website'],
     aliases: [],
@@ -379,6 +394,119 @@ export const ACTIONS = [
       title: `Open ${oneLine(p.url.replace(/^https?:\/\//, ''), 60)}`,
       subtitle: 'In your default browser'
     })
+  },
+  {
+    id: 'pomodoro.start',
+    aiHint: 'Start a pomodoro focus session: timed work intervals separated by short breaks.',
+    title: 'Pomodoro',
+    description: 'Focus / break cycles that run in the background',
+    keywords: ['pomodoro', 'focus session', 'focus timer', 'deep work'],
+    aliases: ['start pomodoro'],
+    icon: 'pomodoro',
+    kind: 'widget',
+    priority: 78,
+    paramsSchema: s.obj({}),
+    describe: () => ({ title: 'Start Pomodoro', subtitle: 'Focus and break cycles' })
+  },
+  {
+    id: 'calendar.agenda',
+    aiHint: "Show what is on the calendar for today or tomorrow: the day's agenda or schedule.",
+    title: 'Agenda',
+    description: "Today's and tomorrow's Google Calendar events",
+    keywords: ['agenda', 'my day', 'today', 'tomorrow', 'schedule today', "what's on"],
+    aliases: ['today agenda'],
+    icon: 'agenda',
+    kind: 'widget',
+    priority: 84,
+    paramsSchema: s.obj({ day: s.opt(s.oneOf('today', 'tomorrow')) }),
+    parse(input) {
+      const m = String(input)
+        .trim()
+        .match(
+          /^(?:agenda|my day|(?:what'?s|what is) on (today|tomorrow)|(today|tomorrow)(?:'s)?\s+(?:agenda|schedule|events|calendar|meetings))$/i
+        )
+      if (!m) return null
+      const day = (m[1] ?? m[2] ?? 'today').toLowerCase()
+      return { params: { day }, confidence: 0.96 }
+    },
+    describe: (p) => ({
+      title: p.day === 'tomorrow' ? "Tomorrow's agenda" : "Today's agenda",
+      subtitle: 'Google Calendar'
+    })
+  },
+  {
+    id: 'clipboard.history',
+    aiHint: 'Look through or paste something that was copied earlier (the clipboard history).',
+    title: 'Clipboard history',
+    description: 'Search what you copied recently (opt-in, kept in memory only)',
+    keywords: ['clipboard', 'paste', 'copied', 'clipboard history'],
+    aliases: ['clip'],
+    icon: 'clipboard',
+    kind: 'widget',
+    priority: 65,
+    paramsSchema: s.obj({ query: optStr(200) }),
+    parse(input) {
+      const m = String(input).match(/^(?:clip|clipboard|paste)\s*[:\s]\s*(.+)$/i)
+      return m ? { params: { query: m[1].trim() }, confidence: 0.9 } : null
+    },
+    describe: (p) => ({
+      title: p.query ? `Clipboard: "${oneLine(p.query, 36)}"` : 'Clipboard history',
+      subtitle: 'Recent copies'
+    })
+  },
+  {
+    id: 'snippets.open',
+    aiHint: 'Insert, find or manage saved text snippets (reusable canned text).',
+    title: 'Snippets',
+    description: 'Saved text you can copy in one keystroke',
+    keywords: ['snippet', 'snippets', 'canned text', 'template text', 'text expansion'],
+    aliases: ['my snippets'],
+    icon: 'snippet',
+    kind: 'widget',
+    priority: 64,
+    paramsSchema: s.obj({ query: optStr(100), create: s.opt(s.bool) }),
+    parse(input) {
+      const m = String(input).match(/^;\s*(.*)$/)
+      return m ? { params: { query: m[1].trim() }, confidence: 0.95 } : null
+    },
+    describe: (p) => ({
+      title: p.query ? `Snippets: "${oneLine(p.query, 30)}"` : 'Snippets',
+      subtitle: 'Type ; to search quickly'
+    })
+  },
+  {
+    id: 'snippet.copy',
+    title: 'Copy snippet',
+    keywords: ['snippet'],
+    aliases: [],
+    icon: 'snippet',
+    kind: 'instant',
+    priority: 66,
+    copies: true,
+    paramsSchema: s.obj({ id: s.int(1), name: optStr(80) }),
+    describe: (p) => ({
+      title: `Snippet: ${oneLine(p.name ?? 'Untitled', 40)}`,
+      subtitle: '↵ to copy'
+    })
+  },
+  {
+    id: 'currency.convert',
+    title: 'Currency conversion',
+    keywords: ['currency', 'exchange rate', 'convert money'],
+    aliases: [],
+    icon: 'currency',
+    kind: 'instant',
+    priority: 93,
+    copies: true,
+    paramsSchema: s.obj({ amount: s.num(0, 1e12), from: s.str(3, 3), to: s.str(3, 3) }),
+    parse(input) {
+      const c = parseCurrency(input)
+      return c ? { params: c, confidence: 1 } : null
+    },
+    describe: (p) => ({
+      title: `${formatMoney(p.amount, p.from)} → ${p.to}`,
+      subtitle: 'Fetching the latest rate…'
+    })
   }
 ]
 
@@ -389,7 +517,9 @@ export const actionIds = () => ACTIONS.map((a) => a.id)
 
 /** Actions the AI may suggest (excludes ones that need live local state or computed results). */
 export const AI_ACTION_IDS = ACTIONS.filter(
-  (a) => !['record.stop', 'calc.evaluate', 'convert.units', 'app.open', 'file.open'].includes(a.id)
+  (a) =>
+    a.aiHint &&
+    !['record.stop', 'calc.evaluate', 'convert.units', 'app.open', 'file.open'].includes(a.id)
 ).map((a) => a.id)
 
 export function isEnabled(action, settings, ctx = {}) {

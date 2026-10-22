@@ -39,6 +39,15 @@ describe('parseReminder', () => {
     expect(hm(r.remindAt)).toEqual([9, 0])
   })
 
+  it('assumes pm for ambiguous small hours ("at 5"), but respects explicit am and larger hours', () => {
+    expect(hm(parseReminder('remind me to call mom tomorrow at 5', NOW).remindAt)).toEqual([17, 0])
+    expect(hm(parseReminder('remind me to call mom tomorrow at 5am', NOW).remindAt)).toEqual([5, 0])
+    expect(hm(parseReminder('remind me to call mom tomorrow at 9', NOW).remindAt)).toEqual([9, 0])
+    expect(hm(parseReminder('remind me to call mom tomorrow at 17:00', NOW).remindAt)).toEqual([
+      17, 0
+    ])
+  })
+
   it('detects repeats', () => {
     expect(parseReminder('remind me to take vitamins every day at 8am', NOW).repeat).toBe('daily')
     expect(parseReminder('remind me to review weekly at 4pm', NOW).repeat).toBe('weekly')
@@ -89,6 +98,18 @@ describe('parseEvent', () => {
     const e = parseEvent('schedule standup', NOW)
     expect(e.title).toBe('Standup')
     expect(e.inferred).toBe(true)
+  })
+
+  it('does not mistake durations and delays for events', () => {
+    for (const q of [
+      'cook the pasta for ten minutes',
+      'cook pasta for 10 minutes',
+      'call mom in 2 hours',
+      'nap for an hour'
+    ]) {
+      expect(parseEvent(q, NOW), q).toBeNull()
+    }
+    expect(parseEvent('lunch at 1', NOW)?.title).toBe('Lunch')
   })
 
   it('does not hijack plain sentences or reminders', () => {

@@ -33,7 +33,7 @@ const Row = memo(function Row({ s, index, selected, onHover }) {
       onClick={() => runSuggestion(s)}
     >
       <span className={styles.tile}>
-        <Icon name={icon} size={21} strokeWidth={1.8} />
+        <Icon name={icon} size={17} strokeWidth={1.8} />
       </span>
       <span className={styles.text}>
         <span className={styles.title}>{s.title}</span>

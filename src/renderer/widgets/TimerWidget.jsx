@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatClock, parseTimerInput } from '@shared/durations'
+import { parseTimerEdit } from '@shared/editParse'
 import { api } from '../api'
 import { timerLive, useNow } from '../hooks/useNow'
 import { isEditable, pinWidgetParams, useFooterHints, useWidgetKeys } from '../hooks/useWidget'
@@ -28,6 +29,7 @@ export default function TimerWidget({ params }) {
   const [error, setError] = useState(null)
   const [custom, setCustom] = useState('')
   const [label, setLabel] = useState(params.label ?? '')
+  const [edit, setEdit] = useState('')
   const started = useRef(false)
 
   const fromStore = useStore(
@@ -155,6 +157,7 @@ export default function TimerWidget({ params }) {
     <div className={`${styles.widget} ${styles.center}`}>
       <div className={styles.sub}>
         {done ? "Time's up" : timer.state === 'paused' ? 'Paused' : 'Timer'}
+        {timer.label ? ` · ${timer.label}` : ''}
       </div>
       <div className={styles.clock} data-done={done} data-paused={timer.state === 'paused'}>
         {formatClock(remaining)}
@@ -189,13 +192,21 @@ export default function TimerWidget({ params }) {
         </button>
       </div>
       <input
-        className={styles.text}
-        style={{ maxWidth: 260, textAlign: 'center' }}
-        value={label}
-        placeholder="Add a label"
-        onChange={(e) => setLabel(e.target.value)}
-        onBlur={() => label !== (timer.label ?? '') && control('rename', label)}
-        onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        className={`${styles.text} ${styles.quick}`}
+        value={edit}
+        placeholder="Change it: “make it 30 min”, “add 5 min”, or type a label"
+        aria-label="Edit timer"
+        onChange={(e) => setEdit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter') return
+          e.preventDefault()
+          const cmd = parseTimerEdit(edit)
+          if (!cmd) return
+          setEdit('')
+          if (cmd.op === 'set') control('setDuration', cmd.ms)
+          else if (cmd.op === 'add') control('add', cmd.ms)
+          else control('rename', cmd.label)
+        }}
       />
       {error && <div className={styles.err}>{error}</div>}
     </div>

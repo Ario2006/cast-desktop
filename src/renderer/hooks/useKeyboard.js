@@ -18,6 +18,14 @@ export function useKeyboard() {
         return
       }
 
+      if (st.view === 'welcome') {
+        if (e.key === 'Escape') {
+          e.preventDefault()
+          st.hide()
+        }
+        return
+      }
+
       if (st.view === 'settings') {
         if (e.key === 'Escape') {
           e.preventDefault()

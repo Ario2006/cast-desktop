@@ -22,12 +22,35 @@ const TOKEN = /(\d+(?:\.\d+)?)\s*(hours?|hrs?|h|minutes?|mins?|m|seconds?|secs?|
 // "1h30" style (hours immediately followed by bare minutes)
 const COMPACT = /\b(\d+)h(\d{1,2})\b/i
 
+const WORD_NUMBERS = {
+  a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16,
+  seventeen: 17, eighteen: 18, nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50,
+  sixty: 60, ninety: 90
+} // prettier-ignore
+const UNIT_WORDS = 'hours?|hrs?|minutes?|mins?|seconds?|secs?'
+const WORD_NUM_RE = new RegExp(
+  `\\b(?:(twenty|thirty|forty|fifty)[-\\s](one|two|three|four|five|six|seven|eight|nine)|(${Object.keys(WORD_NUMBERS).join('|')}))\\s+(?=(?:${UNIT_WORDS})\\b)`,
+  'gi'
+)
+
+/** "ten minutes" -> "10 minutes", "twenty five min" -> "25 min", "half an hour" -> "30 minutes". */
+function numberWordsToDigits(text) {
+  return text
+    .replace(/\bhalf an? hour\b/gi, '30 minutes')
+    .replace(WORD_NUM_RE, (_m, tens, ones, single) =>
+      tens
+        ? `${WORD_NUMBERS[tens.toLowerCase()] + WORD_NUMBERS[ones.toLowerCase()]} `
+        : `${WORD_NUMBERS[single.toLowerCase()]} `
+    )
+}
+
 /**
  * Pull durations out of free text. Returns the total in seconds and the text with the
  * matched durations removed. `seconds` is null when nothing matched.
  */
 export function extractDuration(text) {
-  let rest = String(text)
+  let rest = numberWordsToDigits(String(text))
   let total = 0
   let found = false
 
@@ -42,7 +65,7 @@ export function extractDuration(text) {
     found = true
     return ' '
   })
-  if (!found) return { seconds: null, rest: text }
+  if (!found) return { seconds: null, rest: String(text) }
   const seconds = Math.round(total)
   return { seconds, rest: rest.replace(/\s+/g, ' ').trim() }
 }

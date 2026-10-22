@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { parseEventEdit } from '@shared/editParse'
 import { formatWhen } from '@shared/timeparse'
 import { UNDO_WINDOW_MS } from '@shared/constants'
 import { api } from '../api'
@@ -50,6 +51,8 @@ export default function CalendarWidget({ params }) {
   const [result, setResult] = useState(null)
   const [createdAt, setCreatedAt] = useState(0)
   const formRef = useRef(null)
+  const [quick, setQuick] = useState('')
+  const [quickMiss, setQuickMiss] = useState(false)
 
   const startIso = useMemo(() => new Date(`${date}T${start}`), [date, start])
   const endIso = useMemo(() => new Date(`${date}T${end}`), [date, end])
@@ -248,6 +251,17 @@ export default function CalendarWidget({ params }) {
     )
   }
 
+  // "move to 4pm", "tomorrow 2pm", "for 90 minutes": adjusts the date / time / length in place
+  const applyQuick = () => {
+    const r = parseEventEdit(quick, { start: startIso, end: endIso })
+    setQuickMiss(!r)
+    if (!r) return
+    setDate(dateStr(r.start))
+    setStart(timeStr(r.start))
+    setEnd(timeStr(r.end))
+    setQuick('')
+  }
+
   return (
     <div className={styles.widget} ref={formRef} onKeyDown={onKey}>
       <label className={styles.field}>
@@ -320,6 +334,27 @@ export default function CalendarWidget({ params }) {
           />
         </label>
       </div>
+      <label className={styles.field}>
+        <span className={styles.label}>
+          Quick edit {quickMiss && <span className={styles.err}>— couldn’t read that</span>}
+        </span>
+        <input
+          className={styles.text}
+          value={quick}
+          placeholder="“move to 4pm”, “tomorrow 2pm”, “for 90 minutes”"
+          onChange={(e) => {
+            setQuick(e.target.value)
+            setQuickMiss(false)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              e.stopPropagation() // Enter here edits the draft; it must not create the event
+              applyQuick()
+            }
+          }}
+        />
+      </label>
       <label className={styles.field}>
         <span className={styles.label}>Attendees</span>
         <input

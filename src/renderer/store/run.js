@@ -1,4 +1,5 @@
 import { getAction } from '@shared/actionRegistry'
+import { inputShape } from '@shared/inputShape'
 import { api } from '../api'
 import { useStore } from './useStore'
 
@@ -9,6 +10,15 @@ export async function runSuggestion(s, { alt = false } = {}) {
   const st = useStore.getState()
   const action = getAction(s.actionId)
   if (!action) return
+
+  // remember which action you pick for this kind of input (coarse shape only, never the text)
+  const shape = inputShape(st.query)
+  if (shape && st.settings.learnFromChoices) {
+    api.history
+      .learn(shape, s.actionId)
+      .then(() => st.refreshHistory())
+      .catch(() => {})
+  }
 
   if (action.kind === 'widget') {
     st.openWidget(s.actionId, s.params)

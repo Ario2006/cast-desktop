@@ -23,6 +23,10 @@ const capitalize = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t)
 function dateOf(result, defaultHour = 9) {
   const d = result.start.date()
   if (!result.start.isCertain('hour')) d.setHours(defaultHour, 0, 0, 0)
+  // "at 5" with no am/pm almost always means the afternoon for a reminder or meeting (1–6 → pm)
+  else if (!result.start.isCertain('meridiem') && d.getHours() >= 1 && d.getHours() <= 6) {
+    d.setHours(d.getHours() + 12)
+  }
   return d
 }
 
@@ -115,7 +119,13 @@ export function parseEvent(input, now = new Date(), { defaultMinutes = 30 } = {}
       inferred: true
     }
   }
-  if (!explicit && !result.start.isCertain('hour')) return null
+  if (!explicit) {
+    // Heuristic mode needs a real clock time ("3pm", "15:30", "at 5", "noon"). Relative phrases like
+    // "for ten minutes" / "in 2 hours" are durations or delays, not calendar events.
+    const clockTime =
+      /\d\s*(?:am|pm|a\.m\.|p\.m\.)|\d{1,2}:\d{2}|\b(?:noon|midnight)\b|\bat\s+\d{1,2}\b/i
+    if (!result.start.isCertain('hour') || !clockTime.test(result.text)) return null
+  }
 
   let leftover = cutResult(body, result)
   if (durationSeconds == null) {

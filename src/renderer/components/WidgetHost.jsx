@@ -7,7 +7,11 @@ const WIDGETS = {
   'note.create': lazy(() => import('../widgets/NoteWidget')),
   'notes.search': lazy(() => import('../widgets/NotesSearchWidget')),
   'reminder.create': lazy(() => import('../widgets/ReminderWidget')),
-  'calendar.create': lazy(() => import('../widgets/CalendarWidget'))
+  'calendar.create': lazy(() => import('../widgets/CalendarWidget')),
+  'pomodoro.start': lazy(() => import('../widgets/PomodoroWidget')),
+  'clipboard.history': lazy(() => import('../widgets/ClipboardWidget')),
+  'snippets.open': lazy(() => import('../widgets/SnippetsWidget')),
+  'calendar.agenda': lazy(() => import('../widgets/AgendaWidget'))
 }
 
 export default function WidgetHost({ widget }) {

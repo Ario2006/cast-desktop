@@ -7,19 +7,28 @@ import { safe } from './validate.js'
 // never as a bare fuzzy-matched command.
 const BARE_OK = new Set(ACTIONS.filter((a) => safe(a.paramsSchema, {}).ok).map((a) => a.id))
 
-let fuse
-const getFuse = () =>
-  (fuse ??= new Fuse(ACTIONS, {
-    includeScore: true,
-    threshold: 0.38,
-    ignoreLocation: true,
-    minMatchCharLength: 2,
-    keys: [
-      { name: 'title', weight: 0.45 },
-      { name: 'keywords', weight: 0.4 },
-      { name: 'aliases', weight: 0.15 }
-    ]
-  }))
+// Short queries must match tightly ("sig" must not fuzzy-match "session"); longer ones may typo.
+const fuseCache = new Map()
+const getFuse = (len) => {
+  const threshold = len <= 3 ? 0.2 : len <= 5 ? 0.3 : 0.38
+  if (!fuseCache.has(threshold)) {
+    fuseCache.set(
+      threshold,
+      new Fuse(ACTIONS, {
+        includeScore: true,
+        threshold,
+        ignoreLocation: true,
+        minMatchCharLength: 2,
+        keys: [
+          { name: 'title', weight: 0.45 },
+          { name: 'keywords', weight: 0.4 },
+          { name: 'aliases', weight: 0.15 }
+        ]
+      })
+    )
+  }
+  return fuseCache.get(threshold)
+}
 
 /**
  * Tier 1: synchronous local suggestions. Never throws.
@@ -48,7 +57,7 @@ export function localSuggestions(input, ctx) {
 
   // Fuzzy command-name matching for actions that did not already parse the input.
   if (q.length >= 1) {
-    for (const hit of getFuse().search(q.toLowerCase(), { limit: 12 })) {
+    for (const hit of getFuse(q.length).search(q.toLowerCase(), { limit: 12 })) {
       const action = hit.item
       if (
         parsedActions.has(action.id) ||

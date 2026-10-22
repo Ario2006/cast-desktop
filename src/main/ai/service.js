@@ -25,6 +25,9 @@ export function createAiService({
   let backoffMs = 0
   let status = 'ready'
   let providerCache = null // { key, provider }
+  const cache = new Map() // exact-input answers, so backspacing / retyping is instant
+  const CACHE_MAX = 60
+  const CACHE_TTL_MS = 2 * 60_000
 
   function setStatus(next) {
     if (next !== status) {
@@ -36,11 +39,17 @@ export function createAiService({
   function provider() {
     const s = getSettings()
     const apiKey = getApiKey()
-    const key = `${s.aiBaseUrl}|${s.aiModel}|${apiKey}`
+    const key = `${s.aiProvider}|${s.aiBaseUrl}|${s.aiModel}|${apiKey}`
     if (providerCache?.key !== key) {
       providerCache = {
         key,
-        provider: makeProvider({ baseUrl: s.aiBaseUrl, model: s.aiModel, apiKey, fetch })
+        provider: makeProvider({
+          provider: s.aiProvider,
+          baseUrl: s.aiBaseUrl,
+          model: s.aiModel,
+          apiKey,
+          fetch
+        })
       }
     }
     return providerCache.provider
@@ -68,6 +77,9 @@ export function createAiService({
       const text = String(input ?? '').trim()
       if (text.length < AI_MIN_INPUT) return { ok: false, code: 'too_short' }
       const t = now()
+      const cacheKey = `${getSettings().aiProvider}|${getSettings().aiModel}|${recording ? 1 : 0}|${text.toLowerCase()}`
+      const hit = cache.get(cacheKey)
+      if (hit && t - hit.at < CACHE_TTL_MS) return { ok: true, intents: hit.intents, cached: true }
       if (t < blockedUntil) return { ok: false, code: 'rate_limited' }
       if (t - lastRequestAt < AI_MIN_INTERVAL_MS) return { ok: false, code: 'throttled' }
       lastRequestAt = t
@@ -92,14 +104,18 @@ export function createAiService({
             now: new Date(t).toISOString(),
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: Intl.DateTimeFormat().resolvedOptions().locale,
-            actionIds
+            actionIds,
+            defaultEventMinutes: settings.defaultEventMinutes
           },
           signal: ctrl.signal
         })
         const { intents, malformed } = validateIntents(raw, { allowedIds: actionIds })
         backoffMs = 0
         setStatus('ready')
-        return malformed ? { ok: false, code: 'bad_response' } : { ok: true, intents }
+        if (malformed) return { ok: false, code: 'bad_response' }
+        cache.set(cacheKey, { at: t, intents })
+        if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value)
+        return { ok: true, intents }
       } catch (e) {
         if (e?.name === 'AbortError') return { ok: false, code: timedOut ? 'timeout' : 'cancelled' }
         if (e instanceof ProviderError) {

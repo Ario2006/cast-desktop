@@ -9,7 +9,11 @@ const CHIPS = {
   'calendar.create': 'Calendar',
   'note.create': 'Note',
   'notes.search': 'Notes',
-  'reminder.create': 'Reminder'
+  'reminder.create': 'Reminder',
+  'pomodoro.start': 'Pomodoro',
+  'clipboard.history': 'Clipboard',
+  'snippets.open': 'Snippets',
+  'calendar.agenda': 'Agenda'
 }
 
 export default function SearchInput() {
@@ -28,7 +32,7 @@ export default function SearchInput() {
 
   return (
     <div className={styles.inputBar}>
-      <Icon name="search" size={20} className={styles.searchIcon} />
+      <Icon name="search" size={17} className={styles.searchIcon} />
       {widget && CHIPS[widget.actionId] && (
         <span className={styles.chip}>{CHIPS[widget.actionId]}</span>
       )}

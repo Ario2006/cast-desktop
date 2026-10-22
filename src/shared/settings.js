@@ -1,5 +1,15 @@
 import * as s from './validate.js'
 
+/** AI providers selectable in Settings, with the base URL / model each one starts from. */
+export const AI_PROVIDERS = {
+  openjev: { name: 'Openjev (classifier)', baseUrl: 'https://api.codiv.ai', model: 'jev-latest' },
+  'openai-compatible': {
+    name: 'OpenAI-compatible',
+    baseUrl: 'https://api.openai.com/v1',
+    model: 'gpt-4o-mini'
+  }
+}
+
 /** key -> { default, validate } — single source of truth for settings. */
 const SCHEMA = {
   // General
@@ -9,8 +19,9 @@ const SCHEMA = {
   showOnActiveDisplay: { default: true, validate: s.bool },
   // Suggestions
   smartSuggestions: { default: true, validate: s.bool },
+  aiProvider: { default: 'openjev', validate: s.oneOf('openjev', 'openai-compatible') },
   aiBaseUrl: {
-    default: 'https://api.openai.com/v1',
+    default: 'https://api.codiv.ai',
     validate: (x, p) => {
       s.str(300, 1)(x, p)
       let u
@@ -26,7 +37,7 @@ const SCHEMA = {
       return x.replace(/\/+$/, '')
     }
   },
-  aiModel: { default: 'gpt-4o-mini', validate: s.str(120, 1) },
+  aiModel: { default: 'jev-latest', validate: s.str(120, 1) },
   maxResults: { default: 7, validate: s.int(3, 7) },
   showRecentOnEmpty: { default: true, validate: s.bool },
   // Actions
@@ -37,6 +48,13 @@ const SCHEMA = {
     validate: s.oneOf('none', 'Glass', 'Ping', 'Hero', 'Submarine', 'Funk', 'Sosumi')
   },
   trayTimerTitle: { default: true, validate: s.bool },
+  // Pomodoro
+  pomodoroFocusMinutes: { default: 25, validate: s.int(1, 120) },
+  pomodoroShortBreakMinutes: { default: 5, validate: s.int(1, 60) },
+  pomodoroLongBreakMinutes: { default: 15, validate: s.int(1, 90) },
+  pomodoroCycles: { default: 4, validate: s.int(2, 10) },
+  // Clipboard history (off by default: it can capture sensitive text)
+  clipboardHistory: { default: false, validate: s.bool },
   // Calendar
   googleClientId: { default: '', validate: s.str(300) },
   calendarDefaultId: { default: 'primary', validate: s.str(300, 1) },
@@ -49,6 +67,8 @@ const SCHEMA = {
   copyScreenshotToClipboard: { default: true, validate: s.bool },
   recordMic: { default: false, validate: s.bool },
   stopRecordingShortcut: { default: 'Alt+Shift+Space', validate: s.str(60, 1) },
+  recordingFormat: { default: 'mp4', validate: s.oneOf('mp4', 'webm') },
+  screenshotAfter: { default: 'none', validate: s.oneOf('none', 'preview') },
   // Search
   searchEngine: {
     default: 'google',
@@ -65,7 +85,10 @@ const SCHEMA = {
     }
   },
   // Privacy
-  keepHistory: { default: true, validate: s.bool }
+  keepHistory: { default: true, validate: s.bool },
+  learnFromChoices: { default: true, validate: s.bool },
+  // first-run walkthrough finished
+  onboarded: { default: false, validate: s.bool }
 }
 
 export const SETTING_KEYS = Object.keys(SCHEMA)

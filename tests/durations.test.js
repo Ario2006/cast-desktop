@@ -72,3 +72,22 @@ describe('formatting', () => {
     expect(formatStopwatch(3_661_000)).toBe('1:01:01.00')
   })
 })
+
+describe('number words', () => {
+  it.each([
+    ['cook the pasta for ten minutes', 600],
+    ['timer twenty five minutes', 1500],
+    ['timer twenty-five minutes', 1500],
+    ['timer half an hour', 1800],
+    ['timer an hour', 3600],
+    ['timer a minute', 60],
+    ['timer two hours', 7200]
+  ])('%s -> %i s', (input, seconds) => {
+    const r = parseTimerInput(input.startsWith('timer') ? input : `timer ${input}`)
+    expect(r?.seconds).toBe(seconds)
+  })
+  it('only converts words that precede a time unit', () => {
+    expect(parseTimerInput('timer a lot of tea')).toBeNull()
+    expect(extractDuration('one apple')).toEqual({ seconds: null, rest: 'one apple' })
+  })
+})

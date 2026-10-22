@@ -18,7 +18,7 @@ export default function PermissionCard({ permission, message }) {
   return (
     <div className={styles.permission} role="alert">
       <span className={styles.permissionIcon}>
-        <Icon name="warning" size={22} />
+        <Icon name="warning" size={16} />
       </span>
       <div>
         <h3>{copy.title}</h3>

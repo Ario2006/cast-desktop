@@ -20,6 +20,7 @@ export function createRecorder({
   notify,
   onChange,
   recorderPage,
+  convertToMp4,
   log
 }) {
   let win = null
@@ -48,15 +49,34 @@ export function createRecorder({
     if (!fromRecorder(e) || !state) return
     const { file, startedAt, resolveStop } = state
     const durationMs = Date.now() - startedAt
-    const finish = () => {
-      cleanup()
-      capturesRepo.insert({ kind: 'recording', path: file, durationMs })
+    const saved = (finalPath) => {
+      capturesRepo.insert({ kind: 'recording', path: finalPath, durationMs })
       notify({
         title: 'Recording saved',
-        body: path.basename(file),
-        actions: [{ text: 'Reveal in Finder', onAction: () => shell.showItemInFolder(file) }],
-        onClick: () => shell.showItemInFolder(file)
+        body: path.basename(finalPath),
+        actions: [{ text: 'Reveal in Finder', onAction: () => shell.showItemInFolder(finalPath) }],
+        onClick: () => shell.showItemInFolder(finalPath)
       })
+    }
+    const finish = () => {
+      const wantMp4 = getSettings().recordingFormat === 'mp4' && convertToMp4
+      cleanup()
+      if (wantMp4) {
+        // MediaRecorder's webm has no duration and won't open in QuickTime: remux to mp4 in the
+        // background, keeping the webm if anything goes wrong.
+        const mp4 = file.replace(/\.webm$/, '.mp4')
+        convertToMp4(file, mp4)
+          .then(() => {
+            fs.rmSync(file, { force: true })
+            saved(mp4)
+          })
+          .catch((e) => {
+            log?.warn('mp4 conversion failed; keeping webm', e)
+            saved(file)
+          })
+      } else {
+        saved(file)
+      }
       resolveStop?.({ path: file, durationMs })
     }
     stream ? stream.end(finish) : finish()

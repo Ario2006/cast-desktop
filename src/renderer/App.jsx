@@ -11,6 +11,7 @@ import { useBridgeEvents, useKeyboard } from './hooks/useKeyboard'
 import { useStore } from './store/useStore'
 
 const SettingsView = lazy(() => import('./components/SettingsView'))
+const Welcome = lazy(() => import('./components/Welcome'))
 
 function Launcher() {
   useAsyncSuggestions()
@@ -63,10 +64,11 @@ export default function App() {
       className={styles.frame}
       onMouseDown={(e) => e.target === e.currentTarget && useStore.getState().hide()}
     >
+      <div className={styles.dragStrip} />
       <div className={`${styles.stage} ${leaving ? styles.leaving : ''}`} data-anim={animToken % 2}>
-        {view === 'settings' ? (
+        {view === 'settings' || view === 'welcome' ? (
           <Suspense fallback={null}>
-            <SettingsView />
+            {view === 'settings' ? <SettingsView /> : <Welcome />}
           </Suspense>
         ) : (
           <Launcher />

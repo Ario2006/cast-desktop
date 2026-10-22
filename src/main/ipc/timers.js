@@ -21,7 +21,17 @@ export function registerTimers({ handle }, ctx) {
     IPC.timerControl,
     s.obj({
       id: s.int(1),
-      op: s.oneOf('pause', 'resume', 'reset', 'restart', 'add', 'lap', 'cancel', 'rename'),
+      op: s.oneOf(
+        'pause',
+        'resume',
+        'reset',
+        'restart',
+        'add',
+        'setDuration',
+        'lap',
+        'cancel',
+        'rename'
+      ),
       value: s.opt(s.any(200))
     }),
     ({ id, op, value }) => ctx.scheduler.control(id, op, value)

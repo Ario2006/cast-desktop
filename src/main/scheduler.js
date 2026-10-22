@@ -1,6 +1,7 @@
 import { formatDuration } from '../shared/durations.js'
 import { nextRepeat } from '../shared/timeparse.js'
 import { remindersRepo } from './db/reminders.js'
+import { pomodoroRepo } from './db/features.js'
 import { timersRepo } from './db/timers.js'
 
 const MAX_TIMEOUT = 2 ** 31 - 1
@@ -30,14 +31,28 @@ export function timerView(t, now) {
  *   notify    (n) => void              n = { kind, title, body, timerId?, reminderId?, missed?, repeat? }
  *   onChange  (snapshot) => void       snapshot = { timers: [...], finished?: view, reminders: [...] }
  */
-export function createScheduler({ db, now = Date.now, notify = () => {}, onChange = () => {} }) {
+export const DEFAULT_POMODORO = { focus: 25, short: 5, long: 15, cycles: 4 }
+
+export function createScheduler({
+  db,
+  now = Date.now,
+  notify = () => {},
+  onChange = () => {},
+  getPomodoroConfig = () => DEFAULT_POMODORO
+}) {
+  const pomo = pomodoroRepo(db)
   const timers = timersRepo(db)
   const reminders = remindersRepo(db)
   let handle = null
 
   const activeViews = () => timers.listActive().map((t) => timerView(t, now()))
   const emit = (extra = {}) =>
-    onChange({ timers: activeViews(), reminders: reminders.list(20), ...extra })
+    onChange({
+      timers: activeViews(),
+      reminders: reminders.list(20),
+      pomodoro: pomodoroView(),
+      ...extra
+    })
 
   function nextDueAt() {
     let due = Infinity
@@ -66,13 +81,74 @@ export function createScheduler({ db, now = Date.now, notify = () => {}, onChang
       startedAt: null
     })
     const view = timerView(done, now())
-    notify({
-      kind: 'timer',
-      timerId: done.id,
-      title: done.label ? `${done.label} — time's up` : "Time's up",
-      body: `${formatDuration(done.durationMs / 1000)} timer finished`
-    })
+    if (!advancePomodoro(done.id, true)) {
+      notify({
+        kind: 'timer',
+        timerId: done.id,
+        title: done.label ? `${done.label} — time's up` : "Time's up",
+        body: `${formatDuration(done.durationMs / 1000)} timer finished`
+      })
+    }
     return view
+  }
+
+  // --- Pomodoro: a chain of ordinary timers (focus → break → … → long break) -------------------
+  const pomoMinutes = (phase) => getPomodoroConfig()[phase]
+  const pomoLabel = (phase, cycle) =>
+    phase === 'focus'
+      ? `Focus ${cycle}/${getPomodoroConfig().cycles}`
+      : phase === 'short'
+        ? 'Short break'
+        : 'Long break'
+
+  function startPhase(phase, cycle) {
+    const t = timers.insert({
+      kind: 'timer',
+      label: pomoLabel(phase, cycle),
+      durationMs: pomoMinutes(phase) * 60_000,
+      now: now()
+    })
+    pomo.save({ phase, cycle, timerId: t.id, active: true, startedAt: now() })
+    return t
+  }
+
+  /** Called when the current phase's timer ends (or is skipped). Returns true if it handled the notification. */
+  function advancePomodoro(timerId, notifyUser) {
+    const p = pomo.get()
+    if (!p?.active || p.timerId !== timerId) return false
+    const { cycles } = getPomodoroConfig()
+    let next = null
+    if (p.phase === 'focus') next = { phase: p.cycle >= cycles ? 'long' : 'short', cycle: p.cycle }
+    else if (p.phase === 'short') next = { phase: 'focus', cycle: p.cycle + 1 }
+    if (!next) {
+      pomo.save({ ...p, active: false, startedAt: p.startedAt })
+      if (notifyUser)
+        notify({
+          kind: 'pomodoro',
+          timerId,
+          title: 'Pomodoro complete',
+          body: 'Nice work — session finished.'
+        })
+      return true
+    }
+    const t = startPhase(next.phase, next.cycle)
+    if (notifyUser) {
+      notify({
+        kind: 'pomodoro',
+        timerId: t.id,
+        title: next.phase === 'focus' ? 'Back to focus' : 'Time for a break',
+        body: `${pomoLabel(next.phase, next.cycle)} · ${pomoMinutes(next.phase)} min`
+      })
+    }
+    return true
+  }
+
+  function pomodoroView() {
+    const p = pomo.get()
+    if (!p?.active) return null
+    const t = p.timerId ? timers.get(p.timerId) : null
+    if (!t || !['running', 'paused'].includes(t.state)) return null
+    return { ...p, cycles: getPomodoroConfig().cycles, label: t.label, timer: timerView(t, now()) }
   }
 
   function fireReminder(r, t) {
@@ -176,6 +252,14 @@ export function createScheduler({ db, now = Date.now, notify = () => {}, onChang
         case 'restart':
           timers.update(id, { state: 'running', accumulatedMs: 0, startedAt: n })
           break
+        case 'setDuration': {
+          // "make it 30 minutes": new total length, restarted from now
+          const ms = Math.round(Number(value))
+          if (t.kind === 'timer' && ms > 0 && ms <= 99 * 3_600_000) {
+            timers.update(id, { durationMs: ms, accumulatedMs: 0, startedAt: n, state: 'running' })
+          }
+          break
+        }
         case 'add':
           if (t.kind === 'timer') {
             const added = Math.round(Number(value) || 60_000)
@@ -214,6 +298,34 @@ export function createScheduler({ db, now = Date.now, notify = () => {}, onChang
       const out = timerView(timers.get(id), now())
       emit()
       return out
+    },
+
+    // --- pomodoro ---------------------------------------------------------------------------
+    getPomodoro: pomodoroView,
+    startPomodoro() {
+      const cur = pomo.get()
+      if (cur?.active && cur.timerId)
+        timers.update(cur.timerId, { state: 'cancelled', startedAt: null })
+      const t = startPhase('focus', 1)
+      arm()
+      emit()
+      return timerView(t, now())
+    },
+    skipPomodoro() {
+      const p = pomo.get()
+      if (!p?.active || !p.timerId) return null
+      timers.update(p.timerId, { state: 'cancelled', startedAt: null })
+      advancePomodoro(p.timerId, false)
+      arm()
+      emit()
+      return pomodoroView()
+    },
+    stopPomodoro() {
+      const p = pomo.get()
+      if (p?.timerId) timers.update(p.timerId, { state: 'cancelled', startedAt: null })
+      pomo.stop()
+      arm()
+      emit()
     },
 
     // --- reminders --------------------------------------------------------------------------

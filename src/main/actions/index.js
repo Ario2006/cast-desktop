@@ -4,6 +4,7 @@ import { clipboard, shell } from 'electron'
 import { convertUnits, evaluateMath } from '../../shared/calc.js'
 import { normalizeUrl } from '../../shared/search.js'
 import { searchUrlFor } from '../../shared/suggest.js'
+import { formatMoney } from '../../shared/currency.js'
 import { expandHome } from './paths.js'
 
 const fail = (code, message) => Object.assign(new Error(message), { code })
@@ -21,7 +22,7 @@ async function open(target) {
  *
  * Each executor returns { message?, hide? } — `hide` defaults to true.
  */
-export function createActionRunner({ getSettings, screenshot, recorder }) {
+export function createActionRunner({ getSettings, screenshot, recorder, currency, snippets }) {
   const executors = {
     'calc.evaluate'({ expression }) {
       const r = evaluateMath(expression)
@@ -34,6 +35,18 @@ export function createActionRunner({ getSettings, screenshot, recorder }) {
       if (!r) throw fail('INVALID', 'Cannot convert these units')
       clipboard.writeText(r.text)
       return { message: `Copied ${r.text}`, hide: false }
+    },
+    async 'currency.convert'({ amount, from, to }) {
+      const r = await currency.convert(amount, from, to)
+      const text = formatMoney(r.value, to)
+      clipboard.writeText(text)
+      return { message: `Copied ${text}${r.stale ? ' (offline rates)' : ''}`, hide: false }
+    },
+    'snippet.copy'({ id }) {
+      const snip = snippets.get(id)
+      if (!snip) throw fail('NOT_FOUND', 'Snippet not found')
+      clipboard.writeText(snip.body)
+      return { message: `Copied “${snip.name}”`, hide: false }
     },
     async 'file.open'({ path: p, reveal }) {
       const abs = path.resolve(expandHome(p))

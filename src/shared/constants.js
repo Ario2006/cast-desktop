@@ -1,7 +1,7 @@
 export const APP_NAME = 'Cast'
 
 export const WINDOW = {
-  width: 720, // 680 card + transparent margin for the soft shadow
+  width: 620, // 580 card + transparent margin for the soft shadow
   inputHeight: 56,
   maxContentHeight: 420,
   footerHeight: 34,
@@ -33,6 +33,25 @@ export const IPC = {
   historyRecent: 'history:recent',
   historyRecord: 'history:record',
   historyClear: 'history:clear',
+  historyLearned: 'history:learned',
+  historyLearn: 'history:learn',
+  historyClearLearned: 'history:clear-learned',
+  suggestSnippets: 'suggest:snippets',
+  pomodoroGet: 'pomodoro:get',
+  pomodoroStart: 'pomodoro:start',
+  pomodoroSkip: 'pomodoro:skip',
+  pomodoroStop: 'pomodoro:stop',
+  clipboardList: 'clipboard:list',
+  clipboardCopy: 'clipboard:copy',
+  clipboardClear: 'clipboard:clear',
+  snippetsList: 'snippets:list',
+  snippetsCreate: 'snippets:create',
+  snippetsUpdate: 'snippets:update',
+  snippetsDelete: 'snippets:delete',
+  snippetsCopy: 'snippets:copy',
+  currencyConvert: 'currency:convert',
+  calendarAgenda: 'calendar:agenda',
+  appLogs: 'app:logs',
   timerList: 'timer:list',
   timerGet: 'timer:get',
   timerStart: 'timer:start',
