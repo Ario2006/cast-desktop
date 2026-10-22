@@ -1,0 +1,29 @@
+appId: dev.cast.launcher
+productName: Cast
+copyright: Personal use
+directories:
+  buildResources: resources
+  output: dist
+files:
+  - out/**
+  - package.json
+asar: true
+# better-sqlite3 ships N-API prebuilds (arm64 + x64), so nothing is compiled at package time.
+npmRebuild: false
+mac:
+  category: public.app-category.productivity
+  icon: resources/icon.png
+  target:
+    - target: dir
+      arch: [arm64, x64]
+    - target: dmg
+      arch: [arm64, x64]
+  # Personal use: no signing / notarization. First launch: right-click → Open.
+  identity: null
+  hardenedRuntime: false
+  extendInfo:
+    LSUIElement: true # menu-bar app, no Dock icon
+    NSMicrophoneUsageDescription: Cast uses the microphone only when you record the screen with audio.
+    NSScreenCaptureUsageDescription: Cast needs Screen Recording access to take screenshots and record the screen.
+dmg:
+  sign: false
