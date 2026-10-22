@@ -137,7 +137,7 @@ const TONES = {
 
 export const toneFor = (name) => TONES[name] ?? 'gray'
 
-export default function Icon({ name, size = 18, strokeWidth = 1.7, className }) {
+export default function Icon({ name, size = 18, strokeWidth = 1.8, className }) {
   return (
     <svg
       className={className}

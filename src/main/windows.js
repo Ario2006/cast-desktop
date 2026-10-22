@@ -1,9 +1,9 @@
 import { join } from 'node:path'
-import { BrowserWindow, nativeTheme, screen, session } from 'electron'
+import { BrowserWindow, screen, session } from 'electron'
 import { IPC, WINDOW } from '../shared/constants.js'
 
-const MIN_HEIGHT = WINDOW.inputHeight + WINDOW.footerHeight
-const MAX_HEIGHT = 640 // settings view is taller than the launcher list
+const MIN_HEIGHT = 140
+const MAX_HEIGHT = 860 // settings view is taller than the launcher list
 
 export const rendererTarget = (page) => {
   const dev = process.env.ELECTRON_RENDERER_URL
@@ -21,9 +21,9 @@ export const rendererUrl = (page) => {
  * The launcher is created once (hidden) and then shown/hidden — never destroyed — so the
  * shortcut → visible path stays well under 150 ms.
  *
- * Note on the window style: a frameless *non-transparent* window with macOS vibrancy gets
- * native rounded corners and blur; a fully transparent window would show square vibrancy
- * corners around the CSS-rounded container.
+ * Window style: frameless + transparent. The floating card, pastel frame and soft shadow are
+ * rendered by the renderer (see styles/theme.css); the window adds a transparent margin so the
+ * shadow has room to fade out.
  */
 export function createWindows({ getSettings, log }) {
   let win = null
@@ -44,10 +44,10 @@ export function createWindows({ getSettings, log }) {
       maximizable: false,
       fullscreenable: false,
       skipTaskbar: true,
-      hasShadow: true,
+      // The card, its frame and its shadow are all drawn in CSS inside a transparent window.
+      transparent: true,
+      hasShadow: false,
       type: 'panel',
-      vibrancy: 'under-window',
-      visualEffectState: 'active',
       backgroundColor: '#00000000',
       webPreferences: {
         preload: join(__dirname, '../preload/index.js'),
@@ -126,7 +126,6 @@ export function createWindows({ getSettings, log }) {
     /** Show the launcher; optionally open a widget straight away (e.g. from a notification). */
     show({ widget, settings: openSettings, section } = {}) {
       if (!win || win.isDestroyed()) build()
-      nativeTheme.themeSource = getSettings().theme
       if (!win.isVisible()) place()
       suppressBlurUntil = Date.now() + 300
       win.show()

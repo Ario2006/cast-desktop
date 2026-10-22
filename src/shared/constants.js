@@ -1,7 +1,7 @@
 export const APP_NAME = 'Cast'
 
 export const WINDOW = {
-  width: 680,
+  width: 720, // 680 card + transparent margin for the soft shadow
   inputHeight: 56,
   maxContentHeight: 420,
   footerHeight: 34,

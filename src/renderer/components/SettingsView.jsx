@@ -94,15 +94,6 @@ function General() {
         label="Show on the active display"
         desc="Otherwise always the primary display."
       />
-      <SelectRow
-        settingKey="theme"
-        label="Theme"
-        options={[
-          ['system', 'System'],
-          ['light', 'Light'],
-          ['dark', 'Dark']
-        ]}
-      />
       <ToggleRow
         settingKey="trayTimerTitle"
         label="Show timer in menu bar"

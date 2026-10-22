@@ -3,7 +3,7 @@ import { formatClock } from '@shared/durations'
 import { useNow, timerLive } from '../hooks/useNow'
 import { runSuggestion } from '../store/run'
 import { useStore } from '../store/useStore'
-import Icon, { toneFor } from './Icon'
+import Icon from './Icon'
 import styles from './launcher.module.css'
 
 const LiveSubtitle = ({ timerId, fallback }) => {
@@ -32,8 +32,8 @@ const Row = memo(function Row({ s, index, selected, onHover }) {
       onMouseMove={() => !selected && onHover(index)}
       onClick={() => runSuggestion(s)}
     >
-      <span className={styles.tile} data-tone={toneFor(icon)}>
-        <Icon name={icon} size={17} />
+      <span className={styles.tile}>
+        <Icon name={icon} size={21} strokeWidth={1.8} />
       </span>
       <span className={styles.text}>
         <span className={styles.title}>{s.title}</span>
@@ -50,6 +50,38 @@ const Row = memo(function Row({ s, index, selected, onHover }) {
   )
 })
 
+const EXAMPLES = [
+  '25m',
+  '12*(3+4)',
+  '5 miles in km',
+  'remind me to call mom tomorrow at 5pm',
+  'screenshot'
+]
+
+function EmptyState({ hasQuery }) {
+  if (hasQuery) return <div className={styles.noMatch}>No matches. Try rephrasing.</div>
+  return (
+    <div className={styles.empty}>
+      <h2 className={styles.emptyTitle}>What do you want to do?</h2>
+      <p className={styles.emptyText}>
+        Set timers and reminders, book events, capture the screen, jot notes or do quick maths —
+        just describe it.
+      </p>
+      <div className={styles.examples}>
+        {EXAMPLES.map((e) => (
+          <button
+            key={e}
+            className={styles.example}
+            onClick={() => useStore.getState().setQuery(e)}
+          >
+            {e}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function SuggestionList() {
   const suggestions = useStore((s) => s.suggestions)
   const selected = useStore((s) => s.selected)
@@ -57,18 +89,7 @@ export default function SuggestionList() {
   const select = useStore((s) => s.select)
 
   if (!suggestions.length) {
-    return (
-      <div className={styles.empty}>
-        {query.trim() ? (
-          'No matches.'
-        ) : (
-          <>
-            Try <kbd>25m</kbd>, <kbd>12*(3+4)</kbd>, <kbd>5 miles in km</kbd>,{' '}
-            <kbd>remind me to call mom tomorrow at 5pm</kbd> or <kbd>screenshot</kbd>.
-          </>
-        )}
-      </div>
-    )
+    return <EmptyState hasQuery={Boolean(query.trim())} />
   }
 
   let lastSection = null

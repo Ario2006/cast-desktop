@@ -191,9 +191,6 @@ function boot(setWindows, encryptionAvailable) {
           }
         }
         break
-      case 'theme':
-        nativeTheme.themeSource = value
-        break
       case 'trayTimerTitle':
         tray?.refresh()
         break
@@ -226,7 +223,7 @@ function boot(setWindows, encryptionAvailable) {
 
   // --- UI shell ---------------------------------------------------------------------------
   windows.create()
-  nativeTheme.themeSource = settings.get('theme')
+  nativeTheme.themeSource = 'light' // the design system is light-only
 
   tray = createTray({
     getTimers: () => scheduler.listTimers(),

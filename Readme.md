@@ -28,18 +28,18 @@ Requires macOS and Node 20+. The first launch of an unsigned build needs right-c
 
 ## Using it
 
-| Type | Result |
-|---|---|
-| `25m`, `timer 1h 30m`, `timer for 5 min pasta` | Countdown timer (survives hiding the window and app restarts) |
-| `stopwatch` | Stopwatch with laps |
-| `remind me to call mom tomorrow at 5pm` | Reminder with native notification (snooze / done), fires after a restart; missed ones fire on next launch |
-| `dentist friday 3pm 1 hour`, `book meeting …` | Google Calendar event form, pre-filled; conflict warning; Undo for 10 s |
-| `12*(3+4)`, `15% of 240`, `sqrt(81)` | Live result — **Enter** or **⌘C** copies |
-| `5 miles in km`, `72f in c`, `2 cups to ml` | Live conversion — Enter copies |
-| `screenshot`, `record screen` | Full / area / window capture; screen recording with menu-bar indicator |
-| `note buy milk`, `n: …`, `notes <query>` | Quick notes with autosave and full-text search |
-| `~/Documents`, a file or app name, `open …` | Open (**↵**) or reveal in Finder (**⌘↵**) |
-| `g cats`, `yt lofi`, `ddg …`, any URL | Web search / open URL |
+| Type                                           | Result                                                                                                    |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `25m`, `timer 1h 30m`, `timer for 5 min pasta` | Countdown timer (survives hiding the window and app restarts)                                             |
+| `stopwatch`                                    | Stopwatch with laps                                                                                       |
+| `remind me to call mom tomorrow at 5pm`        | Reminder with native notification (snooze / done), fires after a restart; missed ones fire on next launch |
+| `dentist friday 3pm 1 hour`, `book meeting …`  | Google Calendar event form, pre-filled; conflict warning; Undo for 10 s                                   |
+| `12*(3+4)`, `15% of 240`, `sqrt(81)`           | Live result — **Enter** or **⌘C** copies                                                                  |
+| `5 miles in km`, `72f in c`, `2 cups to ml`    | Live conversion — Enter copies                                                                            |
+| `screenshot`, `record screen`                  | Full / area / window capture; screen recording with menu-bar indicator                                    |
+| `note buy milk`, `n: …`, `notes <query>`       | Quick notes with autosave and full-text search                                                            |
+| `~/Documents`, a file or app name, `open …`    | Open (**↵**) or reveal in Finder (**⌘↵**)                                                                 |
+| `g cats`, `yt lofi`, `ddg …`, any URL          | Web search / open URL                                                                                     |
 
 Keys: `↑↓` select · `↵` run · `⇥` complete · `⌘1…7` run Nth · `⎋` back / clear / hide · `⌘,` settings.
 
@@ -49,7 +49,7 @@ Keys: `↑↓` select · `↵` run · `⇥` complete · `⌘1…7` run Nth · `�
   base URL, model, API key. The key is stored with Electron `safeStorage` (macOS Keychain) and is
   never sent to the renderer. Only the typed text plus current time/timezone/locale is sent.
   Local servers on `localhost` work without a key. With no key or no network, local suggestions keep working.
-- **Google Calendar** — create a *Desktop app* OAuth client in Google Cloud Console (enable the Calendar API),
+- **Google Calendar** — create a _Desktop app_ OAuth client in Google Cloud Console (enable the Calendar API),
   paste the client ID (and secret, if shown) in Settings → Calendar, then **Connect**. Uses the system browser,
   loopback redirect and PKCE; tokens are encrypted with `safeStorage`.
 - **Permissions** — Screen Recording (screenshots/recording), Microphone (optional), Notifications.
@@ -95,9 +95,11 @@ CAST_SMOKE=1 CAST_USER_DATA=/tmp/cast-test CAST_SMOKE_OUT=/tmp/cast-out \
 - **AI provider** — the spec's "Openjev / codiv API" is unspecified (§16 Q1). Cast ships a provider-agnostic
   OpenAI-compatible provider behind the `AIProvider` interface (`src/main/ai/provider.js`); another provider
   is one file.
-- **Window style** — frameless, vibrancy `under-window`, but *not* `transparent: true`: a transparent window
-  shows square vibrancy corners around the rounded container, whereas a non-transparent frameless window gets
-  native rounded corners. Easy to change in `src/main/windows.js`.
+- **Visual design** — a light-only, soft-minimal design system (pastel blue→ivory stage, floating white card,
+  pill input, quiet result cards, Inter via `@fontsource-variable/inter`). All tokens live in
+  `src/renderer/styles/theme.css`. The window is frameless and _transparent_; card, frame and shadow are CSS.
+  The spec's proportions are scaled down to fit a 680 px launcher, and the dark/system theme option was removed
+  because the design system rules dark themes out.
 - **Google Calendar** uses the REST API via `fetch` instead of the `googleapis` package (smaller, same endpoints).
 - **Action history** defaults to **on** (stores only the chosen action's title, never keystrokes) so "Recent"
   works out of the box; toggle in Settings → Privacy (§16 Q6).

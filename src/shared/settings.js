@@ -7,7 +7,6 @@ const SCHEMA = {
   launchAtLogin: { default: false, validate: s.bool },
   hideOnBlur: { default: true, validate: s.bool },
   showOnActiveDisplay: { default: true, validate: s.bool },
-  theme: { default: 'system', validate: s.oneOf('system', 'light', 'dark') },
   // Suggestions
   smartSuggestions: { default: true, validate: s.bool },
   aiBaseUrl: {

@@ -18,10 +18,12 @@ function Launcher() {
   const permissionCard = useStore((s) => s.permissionCard)
   return (
     <>
-      <SearchInput />
-      <div className={styles.body}>
-        {permissionCard && <PermissionCard {...permissionCard} />}
-        {widget ? <WidgetHost widget={widget} /> : !permissionCard && <SuggestionList />}
+      <div className={styles.card}>
+        <SearchInput />
+        <div className={styles.body}>
+          {permissionCard && <PermissionCard {...permissionCard} />}
+          {widget ? <WidgetHost widget={widget} /> : !permissionCard && <SuggestionList />}
+        </div>
       </div>
       <Footer />
     </>
@@ -35,11 +37,11 @@ export default function App() {
   const toast = useStore((s) => s.toast)
   const leaving = useStore((s) => s.leaving)
   const animToken = useStore((s) => s.animToken)
-  const shell = useRef(null)
+  const frame = useRef(null)
 
-  // Keep the native window height in sync with the content (input + list/widget + footer).
+  // Keep the native window height in sync with the content (card + footer + shadow margin).
   useLayoutEffect(() => {
-    const el = shell.current
+    const el = frame.current
     let last = 0
     const report = () => {
       const h = Math.ceil(el.getBoundingClientRect().height)
@@ -55,25 +57,28 @@ export default function App() {
   }, [])
 
   return (
+    // clicking the transparent margin around the card dismisses the launcher
     <div
-      ref={shell}
-      className={`${styles.shell} ${leaving ? styles.leaving : ''}`}
-      data-anim={animToken % 2}
+      ref={frame}
+      className={styles.frame}
+      onMouseDown={(e) => e.target === e.currentTarget && useStore.getState().hide()}
     >
-      {view === 'settings' ? (
-        <Suspense fallback={null}>
-          <SettingsView />
-        </Suspense>
-      ) : (
-        <Launcher />
-      )}
-      {toast && (
-        <div className={styles.toastWrap}>
-          <div className={styles.toast} data-kind={toast.kind} role="status">
-            {toast.text}
+      <div className={`${styles.stage} ${leaving ? styles.leaving : ''}`} data-anim={animToken % 2}>
+        {view === 'settings' ? (
+          <Suspense fallback={null}>
+            <SettingsView />
+          </Suspense>
+        ) : (
+          <Launcher />
+        )}
+        {toast && (
+          <div className={styles.toastWrap}>
+            <div className={styles.toast} data-kind={toast.kind} role="status">
+              {toast.text}
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

@@ -16,8 +16,10 @@ const COPY = {
 export default function PermissionCard({ permission, message }) {
   const copy = COPY[permission] ?? { title: message, body: '' }
   return (
-    <div className={styles.card} role="alert">
-      <Icon name="warning" size={22} className={styles.cardIcon} />
+    <div className={styles.permission} role="alert">
+      <span className={styles.permissionIcon}>
+        <Icon name="warning" size={22} />
+      </span>
       <div>
         <h3>{copy.title}</h3>
         <p>{copy.body}</p>

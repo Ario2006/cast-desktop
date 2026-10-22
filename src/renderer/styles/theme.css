@@ -1,39 +1,61 @@
+/*
+ * Design tokens — soft, premium minimalism (light only).
+ * Everything visual (colors, radii, shadows, type, spacing) is defined here and consumed by the
+ * component CSS modules, so no component invents its own look.
+ */
 :root {
-  color-scheme: light dark;
-  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
-  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
-  --text: #1d1d1f;
-  --text-2: rgba(60, 60, 67, 0.7);
-  --text-3: rgba(60, 60, 67, 0.45);
-  --surface: rgba(246, 246, 248, 0.72);
-  --surface-2: rgba(120, 120, 128, 0.12);
-  --surface-3: rgba(120, 120, 128, 0.2);
-  --hover: rgba(120, 120, 128, 0.12);
-  --selected: rgba(10, 132, 255, 0.16);
-  --border: rgba(60, 60, 67, 0.16);
-  --accent: #0a84ff;
-  --accent-text: #fff;
-  --danger: #e5352b;
-  --success: #1fa84f;
-  --warn: #c77700;
-  --radius: 10px;
-}
+  color-scheme: light;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #f5f5f7;
-    --text-2: rgba(235, 235, 245, 0.68);
-    --text-3: rgba(235, 235, 245, 0.4);
-    --surface: rgba(34, 34, 38, 0.66);
-    --surface-2: rgba(120, 120, 128, 0.2);
-    --surface-3: rgba(120, 120, 128, 0.32);
-    --hover: rgba(235, 235, 245, 0.08);
-    --selected: rgba(10, 132, 255, 0.34);
-    --border: rgba(235, 235, 245, 0.14);
-    --danger: #ff6961;
-    --success: #32d74b;
-    --warn: #ffb340;
-  }
+  /* colors */
+  --bg-blue: #e7eeff;
+  --bg-neutral: #f7f8fc;
+  --bg-ivory: #fbf5ec;
+  --surface: #ffffff;
+  --text: #111827; /* headings, important content */
+  --text-body: #6b7280; /* descriptions */
+  --text-2: #737985; /* metadata */
+  --text-input: #252a34;
+  --placeholder: #9ca3af;
+  --accent: #4b7bff;
+  --accent-hover: #3f6df0;
+  --accent-press: #3560e0;
+  --accent-pale: #eaf0ff;
+  --accent-ring: rgba(75, 123, 255, 0.16);
+  --border: #eceef2;
+  --border-strong: #e1e4ea;
+  --icon-surface: #f3f4f6;
+  --danger: #d92d20;
+  --danger-pale: #fdeceb;
+  --success: #1b9a57;
+  --success-pale: #e8f6ee;
+  --warn: #b54708;
+  --warn-pale: #fef3e6;
+
+  /* shadows */
+  --shadow-soft: rgba(17, 24, 39, 0.08);
+  --shadow-float: 0 18px 44px -12px rgba(17, 24, 39, 0.2), 0 4px 14px rgba(17, 24, 39, 0.06);
+  --shadow-card: 0 1px 2px rgba(17, 24, 39, 0.04), 0 6px 18px -8px var(--shadow-soft);
+
+  /* radii */
+  --r-frame: 36px;
+  --r-container: 28px;
+  --r-card: 22px;
+  --r-field: 20px;
+  --r-pill: 999px;
+
+  /* type */
+  --font:
+    'Inter Variable', 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui,
+    sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* motion */
+  --ease: 160ms ease;
+
+  /* the pastel stage the white container floats on */
+  --stage:
+    radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.7), transparent 60%),
+    linear-gradient(115deg, var(--bg-blue) 0%, var(--bg-neutral) 52%, var(--bg-ivory) 100%);
 }
 
 * {
@@ -49,7 +71,8 @@ body,
 }
 
 body {
-  font: 14px/1.35 var(--font);
+  font: 400 15px/1.45 var(--font);
+  font-feature-settings: 'cv11', 'ss03';
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   user-select: none;
@@ -71,7 +94,7 @@ textarea {
 }
 
 ::placeholder {
-  color: var(--text-3);
+  color: var(--placeholder);
 }
 
 button {
@@ -80,7 +103,22 @@ button {
 
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #dfe3ea;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #cdd2db;
+  background-clip: content-box;
+  border: 3px solid transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

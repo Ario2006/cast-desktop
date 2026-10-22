@@ -34,7 +34,7 @@ describe('settings schema', () => {
 
   it('bounds numeric and enum settings', () => {
     expect(() => validateSetting('maxResults', 99)).toThrow()
-    expect(() => validateSetting('theme', 'neon')).toThrow()
+    expect(() => validateSetting('searchEngine', 'bing')).toThrow()
     expect(() => validateSetting('defaultEventMinutes', 0)).toThrow()
     expect(() => validateSetting('hideOnBlur', 'yes')).toThrow()
   })

@@ -74,9 +74,9 @@ describe('settings repo', () => {
   it('returns defaults, persists validated values, and ignores corrupt rows', () => {
     const db = openDb()
     expect(getAllSettings(db)).toEqual(DEFAULT_SETTINGS)
-    expect(setSetting(db, 'theme', 'dark')).toBe('dark')
-    expect(getAllSettings(db).theme).toBe('dark')
-    expect(() => setSetting(db, 'theme', 'neon')).toThrow()
+    expect(setSetting(db, 'searchEngine', 'brave')).toBe('brave')
+    expect(getAllSettings(db).searchEngine).toBe('brave')
+    expect(() => setSetting(db, 'searchEngine', 'bing')).toThrow()
     db.prepare("INSERT INTO settings(key, value) VALUES('maxResults', '\"oops\"')").run()
     db.prepare("INSERT INTO settings(key, value) VALUES('notASetting', '1')").run()
     const all = getAllSettings(db)
