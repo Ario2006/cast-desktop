@@ -43,6 +43,11 @@ export async function runSmoke({ windows, log, app, setSetting }) {
         `window.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(step.key)}, metaKey: ${!!step.meta}, shiftKey: ${!!step.shift}, bubbles: true }))`
       )
     }
+    if (step.blur) {
+      windows.window.emit('blur') // simulate clicking another app
+      await wait(300)
+      report.steps.push({ blur: true, visibleAfter: windows.isVisible() })
+    }
     if (step.eval) report.steps.push({ eval: step.eval, result: await js(step.eval) })
     await wait(step.wait ?? 500)
     if (step.shot) {

@@ -76,12 +76,10 @@ export function createWindows({ getSettings, log }) {
       if (
         !win.isVisible() ||
         Date.now() < suppressBlurUntil ||
-        process.env.CAST_SMOKE ||
-        process.env.CAST_E2E
+        ((process.env.CAST_SMOKE || process.env.CAST_E2E) && !process.env.CAST_BLUR_TEST)
       )
         return
-      // never auto-hide the first-run walkthrough: launched from Finder, focus can bounce around
-      if (getSettings().hideOnBlur && getSettings().onboarded) api.hide()
+      if (getSettings().hideOnBlur) api.hide()
     })
     wc.on('did-finish-load', () => {
       if (pendingWidget) {
@@ -134,7 +132,8 @@ export function createWindows({ getSettings, log }) {
     show({ widget, settings: openSettings, section, activate } = {}) {
       if (!win || win.isDestroyed()) build()
       if (!win.isVisible()) place()
-      suppressBlurUntil = Date.now() + 300
+      // 'activate' (first run / tray): focus can bounce while macOS brings the app forward
+      suppressBlurUntil = Date.now() + (activate ? 1500 : 300)
       if (process.env.CAST_E2E || process.env.CAST_SMOKE) {
         win.showInactive() // automated runs must never grab your real keyboard focus
       } else {
