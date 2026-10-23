@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { useFooterHints } from '../hooks/useWidget'
+import { useStore } from '../store/useStore'
 import styles from './widgets.module.css'
 
 const preview = (t) => t.replace(/\s+/g, ' ').slice(0, 90)
@@ -74,7 +75,14 @@ export default function SnippetsWidget({ params }) {
       (e.preventDefault(), openForm(current))
     else if (e.metaKey && e.key === 'Backspace' && current) {
       e.preventDefault()
-      api.snippets.delete(current.id).then(load)
+      const gone = current
+      api.snippets.delete(gone.id).then(() => {
+        load()
+        useStore.getState().showToast(`Deleted “${gone.name}”`, 'info', 6000, {
+          label: 'Undo',
+          run: () => api.snippets.create({ name: gone.name, body: gone.body }).then(load)
+        })
+      })
     }
   }
 

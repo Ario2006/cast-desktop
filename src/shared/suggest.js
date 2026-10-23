@@ -36,7 +36,7 @@ const getFuse = (len) => {
  *
  * ctx: { now: Date, settings, recording: boolean }
  */
-export function localSuggestions(input, ctx) {
+export function localSuggestions(input, ctx, { chain = true } = {}) {
   const q = String(input ?? '').trim()
   if (!q) return []
   const rows = []
@@ -65,8 +65,23 @@ export function localSuggestions(input, ctx) {
         !isEnabled(action, ctx.settings, ctx)
       )
         continue
-      // quantized so near-equal matches fall through to action priority (full > area > window)
-      const matchScore = Math.round(Math.max(0, 1 - (hit.score ?? 1)) * 0.9 * 10) / 10
+      // Quantized, with a small priority bias, so near-equal matches go to the action people
+      // usually mean: full > area > window screenshots, and "timr" means the timer, not the timesheet.
+      const raw = Math.max(0, 1 - (hit.score ?? 1)) * 0.9
+      const biased = raw + (action.priority - 70) * 0.005 // common actions win near-ties
+      // a hit in the middle of a word ("sig" in "insights") is weak evidence: cut it hard
+      const ql = q.toLowerCase()
+      const startsWord = [action.title, ...(action.keywords ?? []), ...(action.aliases ?? [])].some(
+        (t) =>
+          t
+            .toLowerCase()
+            .split(/[\s:.-]+/)
+            .some((w) => w.startsWith(ql))
+      )
+      const matchScore = Math.max(
+        0,
+        Math.min(0.9, Math.round((startsWord ? biased : biased * 0.3) * 10) / 10)
+      )
       rows.push(
         makeSuggestion(action, {}, ctx, {
           matchScore,
@@ -74,6 +89,12 @@ export function localSuggestions(input, ctx) {
         })
       )
     }
+  }
+
+  // "remind me to call mom at 5 and book dentist friday 3pm" -> one row that does both
+  if (chain) {
+    const step = chainRow(q, ctx)
+    if (step) rows.push(step)
   }
 
   // Always-available fallback.
@@ -113,4 +134,40 @@ export function intentsToSuggestions(intents, ctx) {
  */
 export function fullyHandledLocally(rows) {
   return rows.some((r) => r.parsed && r.matchScore >= 0.97)
+}
+
+/** Actions that can run as a step of a chained command (each fully specified by its parser). */
+export const CHAINABLE = new Set([
+  'reminder.create',
+  'timer.start',
+  'note.create',
+  'task.add',
+  'calendar.create'
+])
+const CHAIN_SPLIT =
+  /\s+(?:and then|then|and also|and|also)\s+(?=(?:remind|book|schedule|set|start|add|note|jot|todo|task|create|timer|new)\b)|\s*;\s+/i
+
+function chainRow(q, ctx) {
+  const parts = q
+    .split(CHAIN_SPLIT)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  if (parts.length < 2 || parts.length > 4) return null
+  const steps = []
+  for (const part of parts) {
+    const best = localSuggestions(part, ctx, { chain: false })
+      .filter((r) => r.parsed && CHAINABLE.has(r.actionId) && r.matchScore >= 0.8)
+      .sort((a, b) => b.matchScore - a.matchScore)[0]
+    if (!best) return null
+    steps.push({
+      actionId: best.actionId,
+      params: best.params,
+      title: best.title,
+      subtitle: best.subtitle
+    })
+  }
+  const action = getAction('chain.run')
+  return action && isEnabled(action, ctx.settings, ctx)
+    ? makeSuggestion(action, { steps }, ctx, { matchScore: 0.995, parsed: true })
+    : null
 }

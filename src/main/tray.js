@@ -34,7 +34,13 @@ export function makeTrayIcon() {
  *  deps.getRecording()     -> { recording, startedAt }
  *  deps.actions            -> { open, openWidget, openSettings, stopRecording, checkPermissions, quit }
  */
-export function createTray({ getTimers, getRecording, getTitleEnabled, actions }) {
+export function createTray({
+  getTimers,
+  getRecording,
+  getTitleEnabled,
+  getExtraTitle = () => '',
+  actions
+}) {
   const tray = new Tray(makeTrayIcon())
   tray.setToolTip('Cast')
   let ticker = null
@@ -48,14 +54,14 @@ export function createTray({ getTimers, getRecording, getTitleEnabled, actions }
   function title() {
     const rec = getRecording()
     if (rec.recording) return `● ${formatClock(Date.now() - rec.startedAt)}`
-    if (!getTitleEnabled()) return ''
+    if (!getTitleEnabled()) return getExtraTitle()
     const running = getTimers().filter((t) => t.state === 'running')
     const timer = running
       .filter((t) => t.kind === 'timer')
       .sort((a, b) => a.remainingMs - b.remainingMs)[0]
     if (timer) return formatClock(timer.remainingMs)
     const sw = running.find((t) => t.kind === 'stopwatch')
-    return sw ? formatClock(sw.elapsedMs) : ''
+    return sw ? formatClock(sw.elapsedMs) : getExtraTitle()
   }
 
   function render() {

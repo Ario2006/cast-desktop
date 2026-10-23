@@ -84,10 +84,14 @@ export function createOpenjevProvider({ baseUrl, model, apiKey, fetch = globalTh
     id: 'openjev',
 
     async classify({ input, context, signal }) {
-      const ids = context.actionIds.filter((id) => getAction(id)?.aiHint)
+      const builtIn = context.actionIds.filter((id) => getAction(id)?.aiHint)
+      // your own quicklinks / scripts / Shortcuts become extra labels: { label, hint, actionId, params }
+      const custom = new Map((context.custom ?? []).slice(0, 40).map((c) => [c.label, c]))
+      const ids = [...builtIn, ...custom.keys()]
       if (ids.length === 0) return { intents: [] }
 
-      const criteria = Object.fromEntries(ids.map((id) => [id, getAction(id).aiHint]))
+      const criteria = Object.fromEntries(builtIn.map((id) => [id, getAction(id).aiHint]))
+      for (const [label, c] of custom) criteria[label] = c.hint
       criteria[NONE] = NONE_HINT
       const payload = await call(
         'POST',
@@ -129,8 +133,23 @@ export function createOpenjevProvider({ baseUrl, model, apiKey, fetch = globalTh
         else ranked[i][1] = Math.max(ranked[i][1], kp.question)
         ranked.sort((a, b) => b[1] - a[1])
       }
+      // generic web search must never outrank a specific tool the classifier is confident about
+      const bestSpecific = Math.max(
+        0,
+        ...ranked.filter(([id]) => id !== 'web.search').map(([, p]) => p)
+      )
+      if (bestSpecific >= 0.5) {
+        const w = ranked.find(([id]) => id === 'web.search')
+        if (w) w[1] = Math.min(w[1], bestSpecific * 0.6)
+        ranked.sort((a, b) => b[1] - a[1])
+      }
       for (const [actionId, confidence] of ranked) {
         if (intents.length >= AI_MAX_INTENTS) break
+        const c = custom.get(actionId)
+        if (c) {
+          intents.push({ actionId: c.actionId, confidence, params: c.params })
+          continue
+        }
         const params = inferParams(actionId, input, inferCtx)
         if (params) intents.push({ actionId, confidence, params })
       }

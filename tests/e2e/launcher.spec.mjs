@@ -1,45 +1,11 @@
-import fs from 'node:fs'
-import os from 'node:os'
-import path from 'node:path'
-import { _electron as electron, expect, test } from '@playwright/test'
-
-const ROOT = path.resolve(import.meta.dirname, '../..')
-
-/** Launch the built app with a throwaway data dir; returns { app, page }. */
-async function launch(settings = {}) {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cast-e2e-'))
-  const app = await electron.launch({
-    args: [ROOT],
-    cwd: ROOT,
-    env: {
-      ...process.env,
-      CAST_E2E: '1',
-      CAST_USER_DATA: dir,
-      CAST_SETTINGS: JSON.stringify({ onboarded: true, smartSuggestions: false, ...settings })
-    }
-  })
-  const logs = []
-  app.process().stderr?.on('data', (d) => logs.push(String(d)))
-  app.process().on('exit', (code, sig) => logs.push(`[app exited code=${code} signal=${sig}]`))
-  const page = await app.firstWindow()
-  page.on('crash', () => logs.push('[renderer crashed]'))
-  page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`))
-  // first run shows the welcome walkthrough instead of the search box
-  await page
-    .locator('input[role="combobox"]')
-    .or(page.getByText('Welcome to Cast'))
-    .first()
-    .waitFor()
-  app.logs = logs
-  return { app, page }
-}
-
-const search = (page) => page.locator('input[role="combobox"]')
-const rows = (page) => page.locator('[role="option"]')
+import { expect, test } from '@playwright/test'
+import { launch, rows, search } from './helpers.mjs'
 
 test.describe('launcher', () => {
   let app, page
   test.beforeEach(async () => ({ app, page } = await launch()))
+  // Playwright requires a destructured first argument here, even when no fixtures are used
+  // eslint-disable-next-line no-empty-pattern
   test.afterEach(async ({}, testInfo) => {
     if (testInfo.status !== testInfo.expectedStatus) console.log('APP LOGS:', app.logs?.join('\n'))
     await app.close().catch(() => {})

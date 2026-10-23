@@ -17,6 +17,15 @@ const SCHEMA = {
   launchAtLogin: { default: false, validate: s.bool },
   hideOnBlur: { default: true, validate: s.bool },
   showOnActiveDisplay: { default: true, validate: s.bool },
+  theme: { default: 'light', validate: s.oneOf('light', 'dark', 'system') },
+  textSize: { default: 'normal', validate: s.oneOf('small', 'normal', 'large') },
+  highContrast: { default: false, validate: s.bool },
+  trayDisplay: { default: 'timer', validate: s.oneOf('timer', 'meeting', 'weather', 'none') },
+  weatherLocation: { default: '', validate: s.str(100) },
+  temperatureUnit: {
+    default: Intl.NumberFormat().resolvedOptions().locale === 'en-US' ? 'fahrenheit' : 'celsius',
+    validate: s.oneOf('celsius', 'fahrenheit')
+  },
   // Suggestions
   smartSuggestions: { default: true, validate: s.bool },
   aiProvider: { default: 'openjev', validate: s.oneOf('openjev', 'openai-compatible') },
@@ -38,6 +47,7 @@ const SCHEMA = {
     }
   },
   aiModel: { default: 'jev-latest', validate: s.str(120, 1) },
+  aiCustomLabels: { default: true, validate: s.bool },
   maxResults: { default: 7, validate: s.int(3, 7) },
   showRecentOnEmpty: { default: true, validate: s.bool },
   // Actions
@@ -53,6 +63,27 @@ const SCHEMA = {
   pomodoroShortBreakMinutes: { default: 5, validate: s.int(1, 60) },
   pomodoroLongBreakMinutes: { default: 15, validate: s.int(1, 90) },
   pomodoroCycles: { default: 4, validate: s.int(2, 10) },
+  focusShortcutOn: { default: '', validate: s.str(120) },
+  focusShortcutOff: { default: '', validate: s.str(120) },
+  taskReminders: { default: true, validate: s.bool },
+  // Developer
+  projectFolders: {
+    default: ['~/Desktop', '~/Developer', '~/Projects', '~/code', '~/Documents'],
+    validate: s.arr(s.str(300, 1), 12)
+  },
+  projectEditor: {
+    default: 'vscode',
+    validate: s.oneOf('vscode', 'cursor', 'zed', 'sublime', 'webstorm', 'xcode', 'finder')
+  },
+  terminalApp: { default: 'terminal', validate: s.oneOf('terminal', 'iterm', 'warp', 'ghostty') },
+  scriptsEnabled: { default: false, validate: s.bool },
+  scriptsFolder: { default: '~/Library/Application Support/Cast/Scripts', validate: s.str(500, 1) },
+  remBase: { default: 16, validate: s.int(4, 64) },
+  // Integrations
+  captureDefault: { default: 'notes', validate: s.oneOf('notes', 'obsidian', 'notion') },
+  obsidianVault: { default: '', validate: s.str(500) },
+  obsidianInboxNote: { default: 'Cast Inbox', validate: s.str(80, 1) },
+  notionPageId: { default: '', validate: s.str(300) },
   // Clipboard history (off by default: it can capture sensitive text)
   clipboardHistory: { default: false, validate: s.bool },
   // Calendar

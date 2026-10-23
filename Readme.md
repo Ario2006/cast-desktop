@@ -16,7 +16,7 @@ Full specification: [`app-spec.md`](./app-spec.md).
 npm install
 npm run dev        # launch with hot reload (menu-bar icon appears; press ⌥ Space)
 npm test           # unit tests (Vitest)
-npm run test:e2e   # builds, then drives the real app with Playwright
+npm run test:e2e   # builds, then drives the real app with Playwright (24 tests)
 npm run lint
 npm run pack       # unsigned Cast.app in dist/mac-<arch>/
 npm run dist       # + .dmg for arm64 and x64
@@ -49,6 +49,26 @@ Requires macOS and Node 20+. The first launch of an unsigned build needs right-c
 
 Keys: `↑↓` select · `↵` run · `⇥` complete · `⌘1…7` run Nth · `⎋` back / clear / hide · `⌘,` settings.
 
+### More things to type (type `?` in Cast for the full, clickable list)
+
+| Area         | Examples                                                                                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Answers      | `weather`, `paris weather tomorrow`, `define serendipity`, `who is ada lovelace`, `translate good morning to spanish`                                                                                                |
+| Time         | `time in tokyo`, `3pm pst in ist`, `standup every weekday 10am` (recurring events)                                                                                                                                   |
+| Tasks & time | `todo pay rent friday 5pm` (also sets a reminder), `tasks`, `track client work`, `stop tracking`, `timesheet`, `briefing`                                                                                            |
+| Calls        | `join` opens the next Meet / Zoom / Teams link from your calendar                                                                                                                                                    |
+| Mac          | `lock`, `dark mode`, `volume 40`, `wifi off`, `empty trash` / `restart` (ask first), `left half`, `maximize`, `color picker`, `call mom`, `shortcut morning`                                                         |
+| Developers   | `base64 hello`, `sha256 abc`, `slug`, `uuid`, `password 24`, `0xff`, `24px to rem`, `#ff8800`, `cron 0 9 * * 1-5`, `json` (JSON / regex / diff scratchpad), `npm react`, `gh prs`, `proj cast`, `ports`, `kill 3000` |
+| Capture      | `obsidian: idea`, `apple note: …`, `notion: …`, `:rocket` (emoji), `? invoice` (search everything)                                                                                                                   |
+| Combine      | `remind me to stretch at 9am and todo email sam` runs both                                                                                                                                                           |
+
+You can also add your own **quicklinks** (Settings → Quicklinks, e.g. `jira ABC-12`) and **script commands**
+(Settings → Developer). Your quicklinks, scripts and Shortcuts are offered to the AI classifier too, so
+“open our issue tracker” can find them.
+
+Some features need a one-time macOS permission: window layouts (Accessibility), and Notes / Contacts / dark mode /
+Finder actions (Automation). Cast shows an explanatory card with a button to the right System Settings pane.
+
 ### Editing in plain English
 
 Open widgets understand follow-ups: in a timer type “make it 30 min”, “add 5 min” or a label; in a calendar
@@ -79,6 +99,13 @@ text. Turn it off or clear it in Settings → Suggestions / Privacy.
 
 Data lives in `~/Library/Application Support/Cast/` (`cast.db`, `secrets.bin`, `logs/`).
 Set `CAST_USER_DATA=/some/dir` to use a throwaway data directory.
+
+## Privacy
+
+Everything is local except: the text you type to your AI provider, and (only when you use them) weather
+(open-meteo.com), definitions (dictionaryapi.dev), Wikipedia, translation (mymemory.translated.net),
+ECB exchange rates (frankfurter.dev), Google Calendar and Notion. Clipboard history is opt-in and memory-only.
+Export (Settings → Privacy) never includes API keys or tokens and can be passphrase-encrypted.
 
 ## Architecture
 

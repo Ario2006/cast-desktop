@@ -1,4 +1,5 @@
 import crypto from 'node:crypto'
+import { meetingLink } from '../../shared/commands.js'
 import { GoogleAuthError } from './oauth.js'
 
 const API = 'https://www.googleapis.com/calendar/v3'
@@ -121,10 +122,27 @@ export function createCalendarClient({ auth, fetch = globalThis.fetch }) {
           allDay: Boolean(e.start?.date && !e.start?.dateTime),
           location: e.location || undefined,
           htmlLink: e.htmlLink,
+          link: meetingLink(e),
           calendar: c.name,
           color: c.color
         }))
         .sort((a, b) => Date.parse(a.start) - Date.parse(b.start))
+    },
+
+    /** The meeting with a video link that is happening now or starts next today (or null). */
+    async nextMeeting(now = Date.now()) {
+      const from = new Date(now - 60 * 60_000).toISOString()
+      const to = new Date(now + 12 * 3_600_000).toISOString()
+      const events = await this.listAgenda({ start: from, end: to })
+      return (
+        events.find(
+          (e) =>
+            !e.allDay &&
+            e.link &&
+            Date.parse(e.end) > now &&
+            Date.parse(e.start) - now < 12 * 3_600_000
+        ) ?? null
+      )
     },
 
     async insertEvent({
@@ -136,9 +154,11 @@ export function createCalendarClient({ auth, fetch = globalThis.fetch }) {
       location,
       description,
       attendees,
-      addMeetLink
+      addMeetLink,
+      recurrence
     }) {
       const event = {
+        ...(recurrence ? { recurrence: [recurrence] } : {}),
         summary: title,
         start: { dateTime: start, timeZone },
         end: { dateTime: end, timeZone },

@@ -38,7 +38,8 @@ export function createScheduler({
   now = Date.now,
   notify = () => {},
   onChange = () => {},
-  getPomodoroConfig = () => DEFAULT_POMODORO
+  getPomodoroConfig = () => DEFAULT_POMODORO,
+  onPomodoroPhase = () => {}
 }) {
   const pomo = pomodoroRepo(db)
   const timers = timersRepo(db)
@@ -109,6 +110,7 @@ export function createScheduler({
       now: now()
     })
     pomo.save({ phase, cycle, timerId: t.id, active: true, startedAt: now() })
+    onPomodoroPhase(phase)
     return t
   }
 
@@ -122,6 +124,7 @@ export function createScheduler({
     else if (p.phase === 'short') next = { phase: 'focus', cycle: p.cycle + 1 }
     if (!next) {
       pomo.save({ ...p, active: false, startedAt: p.startedAt })
+      onPomodoroPhase(null)
       if (notifyUser)
         notify({
           kind: 'pomodoro',
@@ -324,6 +327,7 @@ export function createScheduler({
       const p = pomo.get()
       if (p?.timerId) timers.update(p.timerId, { state: 'cancelled', startedAt: null })
       pomo.stop()
+      onPomodoroPhase(null)
       arm()
       emit()
     },

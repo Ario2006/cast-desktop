@@ -68,9 +68,13 @@ export function registerCalendar({ handle }, ctx) {
       description: s.opt(s.str(2000)),
       attendees: s.opt(s.arr(s.str(200), 20)),
       calendarId: s.opt(s.str(300)),
-      addMeetLink: s.opt(s.bool)
+      addMeetLink: s.opt(s.bool),
+      recurrence: s.opt(s.str(200))
     }),
     async (p) => {
+      if (p.recurrence && !/^RRULE:[A-Z0-9=;,]+$/.test(p.recurrence)) {
+        throw Object.assign(new Error('Invalid repeat rule'), { code: 'INVALID' })
+      }
       if (Date.parse(p.end) <= Date.parse(p.start))
         throw Object.assign(new Error('End must be after start'), { code: 'INVALID' })
       const settings = ctx.settings.all()

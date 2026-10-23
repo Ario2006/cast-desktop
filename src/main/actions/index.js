@@ -22,7 +22,16 @@ async function open(target) {
  *
  * Each executor returns { message?, hide? } — `hide` defaults to true.
  */
-export function createActionRunner({ getSettings, screenshot, recorder, currency, snippets }) {
+const safeWebUrl = (u) => (/^https?:\/\/\S+$/i.test(String(u)) ? String(u) : null)
+
+export function createActionRunner({
+  getSettings,
+  screenshot,
+  recorder,
+  currency,
+  snippets,
+  tools = {}
+}) {
   const executors = {
     'calc.evaluate'({ expression }) {
       const r = evaluateMath(expression)
@@ -88,6 +97,71 @@ export function createActionRunner({ getSettings, screenshot, recorder, currency
     async 'record.stop'() {
       await recorder.stop()
       return {}
+    },
+
+    // --- everyday / system ---------------------------------------------------------------------
+    async 'system.command'(p) {
+      const message = await tools.runSystemCommand(p)
+      return { message }
+    },
+    async 'window.layout'({ layout }) {
+      await tools.applyLayout(layout)
+      return {}
+    },
+    async 'contact.open'({ via, value }) {
+      const url = tools.contactUrl(via, value)
+      if (!url) throw fail('INVALID', 'That contact has no usable number')
+      await shell.openExternal(url)
+      return {}
+    },
+    async 'shortcut.run'({ name }) {
+      const out = await tools.shortcuts.run(name)
+      if (out) clipboard.writeText(out)
+      return { message: out ? `“${name}” finished · output copied` : `Ran “${name}”` }
+    },
+
+    // --- developers --------------------------------------------------------------------------------
+    async 'docs.search'({ url }) {
+      const safe = safeWebUrl(url)
+      if (!safe) throw fail('INVALID', 'Not a web address')
+      await shell.openExternal(safe)
+      return {}
+    },
+    async 'quicklink.open'({ url }) {
+      const safe = safeWebUrl(url)
+      if (!safe) throw fail('INVALID', 'Quicklinks must be http(s) addresses')
+      await shell.openExternal(safe)
+      return {}
+    },
+    async 'project.open'({ path: p, target }) {
+      await tools.projects.open(p, target ?? 'editor')
+      return {}
+    },
+    async 'port.kill'({ port, confirmed }) {
+      return { message: await tools.killPort(port, { confirmed }) }
+    },
+
+    // --- productivity --------------------------------------------------------------------------------
+    'task.add'({ text, due }) {
+      const t = tools.addTask(text, due)
+      return { message: t.due ? `Task added · reminder set` : 'Task added', hide: false }
+    },
+    'time.track'({ project }) {
+      tools.time.start(project)
+      tools.onTrackingChange()
+      return { message: `Tracking “${project}”` }
+    },
+    'time.stop'() {
+      const e = tools.time.stop()
+      tools.onTrackingChange()
+      if (!e) return { message: 'Nothing was being tracked' }
+      const mins = Math.round((e.endedAt - e.startedAt) / 60_000)
+      return {
+        message: `Stopped “${e.project}” · ${mins >= 60 ? `${Math.floor(mins / 60)} h ${mins % 60} min` : `${mins} min`}`
+      }
+    },
+    async 'note.send'({ target, text }) {
+      return { message: await tools.capture.send(target, text), hide: false }
     }
   }
 

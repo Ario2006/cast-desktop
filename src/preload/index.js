@@ -25,7 +25,11 @@ contextBridge.exposeInMainWorld('cast', {
     cancel: (requestId) => send(IPC.suggestCancel, { requestId }),
     files: (query) => invoke(IPC.suggestFiles, { query }),
     notes: (query) => invoke(IPC.suggestNotes, { query }),
-    snippets: (query) => invoke(IPC.suggestSnippets, { query })
+    snippets: (query) => invoke(IPC.suggestSnippets, { query }),
+    projects: (query) => invoke(IPC.suggestProjects, { query }),
+    scripts: (query) => invoke(IPC.suggestScripts, { query }),
+    shortcuts: (query) => invoke(IPC.suggestShortcuts, { query }),
+    contacts: (query) => invoke(IPC.suggestContacts, { query })
   },
   history: {
     stats: () => invoke(IPC.historyStats),
@@ -53,6 +57,45 @@ contextBridge.exposeInMainWorld('cast', {
     update: (p) => invoke(IPC.snippetsUpdate, p),
     delete: (id) => invoke(IPC.snippetsDelete, { id }),
     copy: (id) => invoke(IPC.snippetsCopy, { id })
+  },
+  live: {
+    resolve: (actionId, params) => invoke(IPC.liveResolve, { actionId, params })
+  },
+  tasks: {
+    list: () => invoke(IPC.tasksList),
+    add: (text, due) => invoke(IPC.tasksAdd, { text, due }),
+    update: (p) => invoke(IPC.tasksUpdate, p),
+    delete: (id) => invoke(IPC.tasksDelete, { id }),
+    clearDone: () => invoke(IPC.tasksClearDone)
+  },
+  time: {
+    status: () => invoke(IPC.timeStatus),
+    start: (project) => invoke(IPC.timeStart, { project }),
+    stop: () => invoke(IPC.timeStop),
+    delete: (id) => invoke(IPC.timeDelete, { id })
+  },
+  quicklinks: {
+    list: () => invoke(IPC.quicklinksList),
+    create: (p) => invoke(IPC.quicklinksCreate, p),
+    update: (p) => invoke(IPC.quicklinksUpdate, p),
+    delete: (id) => invoke(IPC.quicklinksDelete, { id }),
+    onChange: (cb) => subscribe(IPC.quicklinksChanged, cb)
+  },
+  dev: {
+    ports: () => invoke(IPC.portsList),
+    runScript: (id, argument) => invoke(IPC.scriptsRun, { id, argument }),
+    openScriptsFolder: () => invoke(IPC.scriptsOpenFolder)
+  },
+  overview: {
+    insights: () => invoke(IPC.insightsGet),
+    briefing: () => invoke(IPC.briefingGet),
+    searchAll: (query) => invoke(IPC.searchAll, { query })
+  },
+  data: {
+    export: (passphrase) => invoke(IPC.syncExport, { passphrase }),
+    import: (passphrase, path) => invoke(IPC.syncImport, { passphrase, path }),
+    diagnostics: () => invoke(IPC.diagnosticsCopy),
+    pickFolder: (title) => invoke(IPC.pickFolder, { title })
   },
   currency: {
     convert: (amount, from, to) => invoke(IPC.currencyConvert, { amount, from, to })

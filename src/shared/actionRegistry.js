@@ -1,4 +1,5 @@
 import * as s from './validate.js'
+import { EXTRA_ACTIONS } from './actionsExtra.js'
 import { evaluateMath, convertUnits } from './calc.js'
 import { formatMoney, parseCurrency } from './currency.js'
 import { durationPhrase, formatDuration, parseTimerInput } from './durations.js'
@@ -94,13 +95,20 @@ export const ACTIONS = [
       description: optStr(2000),
       attendees: s.opt(s.arr(s.str(200), 20)),
       calendarId: optStr(300),
-      addMeetLink: s.opt(s.bool)
+      addMeetLink: s.opt(s.bool),
+      recurrence: s.opt(s.str(200)),
+      recurrenceLabel: s.opt(s.str(80))
     }),
     parse(input, ctx) {
       const r = parseEvent(input, ctx.now, { defaultMinutes: ctx.settings.defaultEventMinutes })
       if (!r) return null
       return {
-        params: { title: r.title, start: r.start.toISOString(), end: r.end.toISOString() },
+        params: {
+          title: r.title,
+          start: r.start.toISOString(),
+          end: r.end.toISOString(),
+          ...(r.recurrence ? { recurrence: r.recurrence, recurrenceLabel: r.recurrenceLabel } : {})
+        },
         confidence: r.inferred ? 0.55 : 0.82
       }
     },
@@ -111,7 +119,7 @@ export const ACTIONS = [
         : p.durationMinutes
       return {
         title: `Book "${oneLine(p.title || 'Untitled', 40)}"`,
-        subtitle: `${formatWhen(p.start, ctx.now)}${mins ? ` · ${formatDuration(mins * 60)}` : ''}`
+        subtitle: `${p.recurrenceLabel ? `${p.recurrenceLabel[0].toUpperCase()}${p.recurrenceLabel.slice(1)} from ` : ''}${formatWhen(p.start, ctx.now)}${mins ? ` · ${formatDuration(mins * 60)}` : ''}`
       }
     }
   },
@@ -496,6 +504,8 @@ export const ACTIONS = [
     aliases: [],
     icon: 'currency',
     kind: 'instant',
+    live: true,
+    onRun: 'copy',
     priority: 93,
     copies: true,
     paramsSchema: s.obj({ amount: s.num(0, 1e12), from: s.str(3, 3), to: s.str(3, 3) }),
@@ -507,7 +517,8 @@ export const ACTIONS = [
       title: `${formatMoney(p.amount, p.from)} → ${p.to}`,
       subtitle: 'Fetching the latest rate…'
     })
-  }
+  },
+  ...EXTRA_ACTIONS
 ]
 
 const BY_ID = new Map(ACTIONS.map((a) => [a.id, a]))

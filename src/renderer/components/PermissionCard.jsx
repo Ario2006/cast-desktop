@@ -7,6 +7,14 @@ const COPY = {
     title: 'Screen Recording permission required',
     body: 'Allow Cast under Privacy & Security → Screen Recording, then try again.'
   },
+  accessibility: {
+    title: 'Accessibility permission required',
+    body: 'Window layouts move other apps’ windows. Allow Cast under Privacy & Security → Accessibility, then try again.'
+  },
+  automation: {
+    title: 'Automation permission required',
+    body: 'Cast needs to control that app (Notes, Contacts, Finder or System Events). Allow it under Privacy & Security → Automation.'
+  },
   microphone: {
     title: 'Microphone permission required',
     body: 'Allow Cast under Privacy & Security → Microphone, then try again.'

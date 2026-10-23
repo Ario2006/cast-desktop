@@ -13,6 +13,7 @@ import { createProvider, ProviderError } from './provider.js'
 export function createAiService({
   getSettings,
   getApiKey,
+  getCustomLabels = () => [],
   onStatus = () => {},
   now = Date.now,
   fetch = globalThis.fetch,
@@ -98,6 +99,11 @@ export function createAiService({
         const actionIds = AI_ACTION_IDS.filter((id) =>
           isEnabled(getAction(id), settings, { recording })
         )
+        const custom = settings.aiCustomLabels
+          ? await Promise.resolve(getCustomLabels()).catch(() => [])
+          : []
+        // the request may have been cancelled while the custom labels were loading
+        if (ctrl.signal.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' })
         const raw = await provider().classify({
           input: text,
           context: {
@@ -105,11 +111,14 @@ export function createAiService({
             timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
             locale: Intl.DateTimeFormat().resolvedOptions().locale,
             actionIds,
+            custom,
             defaultEventMinutes: settings.defaultEventMinutes
           },
           signal: ctrl.signal
         })
-        const { intents, malformed } = validateIntents(raw, { allowedIds: actionIds })
+        const { intents, malformed } = validateIntents(raw, {
+          allowedIds: [...actionIds, ...custom.map((c) => c.actionId)]
+        })
         backoffMs = 0
         setStatus('ready')
         if (malformed) return { ok: false, code: 'bad_response' }

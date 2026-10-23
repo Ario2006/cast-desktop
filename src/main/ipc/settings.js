@@ -6,10 +6,12 @@ import * as s from '../../shared/validate.js'
 const PANES = {
   screen: 'x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture',
   microphone: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone',
-  notifications: 'x-apple.systempreferences:com.apple.Notifications-Settings.extension'
+  notifications: 'x-apple.systempreferences:com.apple.Notifications-Settings.extension',
+  accessibility: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility',
+  automation: 'x-apple.systempreferences:com.apple.preference.security?Privacy_Automation'
 }
 
-const SECRET_NAMES = ['aiApiKey', 'googleClientSecret']
+const SECRET_NAMES = ['aiApiKey', 'googleClientSecret', 'notionToken']
 
 export function registerSettings({ handle }, ctx) {
   handle(IPC.settingsGetAll, null, () => ctx.settings.all())
@@ -38,11 +40,16 @@ export function registerSettings({ handle }, ctx) {
 
   handle(IPC.permissionsStatus, null, () => ({
     screen: systemPreferences.getMediaAccessStatus('screen'),
-    microphone: systemPreferences.getMediaAccessStatus('microphone')
+    microphone: systemPreferences.getMediaAccessStatus('microphone'),
+    accessibility: systemPreferences.isTrustedAccessibilityClient(false)
+      ? 'granted'
+      : 'not-determined'
   }))
   handle(
     IPC.permissionsOpen,
-    s.obj({ type: s.oneOf('screen', 'microphone', 'notifications') }),
+    s.obj({
+      type: s.oneOf('screen', 'microphone', 'notifications', 'accessibility', 'automation')
+    }),
     async ({ type }) => {
       if (
         type === 'microphone' &&
@@ -50,6 +57,7 @@ export function registerSettings({ handle }, ctx) {
       ) {
         await systemPreferences.askForMediaAccess('microphone')
       }
+      if (type === 'accessibility') systemPreferences.isTrustedAccessibilityClient(true) // registers Cast in the list
       await shell.openExternal(PANES[type])
     }
   )

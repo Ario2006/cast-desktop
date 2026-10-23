@@ -22,6 +22,9 @@ const SECTIONS = [
   ['calendar', 'Calendar'],
   ['capture', 'Capture'],
   ['search', 'Search'],
+  ['developer', 'Developer'],
+  ['quicklinks', 'Quicklinks'],
+  ['integrations', 'Integrations'],
   ['privacy', 'Privacy'],
   ['permissions', 'Permissions'],
   ['about', 'About']
@@ -99,6 +102,304 @@ function General() {
         settingKey="trayTimerTitle"
         label="Show timer in menu bar"
         desc="Remaining / elapsed time next to the icon."
+      />
+      <SelectRow
+        settingKey="trayDisplay"
+        label="Menu bar when idle"
+        desc="What to show next to the icon when no timer is running."
+        options={[
+          ['timer', 'Nothing'],
+          ['meeting', 'Next meeting'],
+          ['weather', 'Weather'],
+          ['none', 'Nothing, ever']
+        ]}
+      />
+      <SectionTitle>Appearance</SectionTitle>
+      <SelectRow
+        settingKey="theme"
+        label="Theme"
+        options={[
+          ['light', 'Light'],
+          ['dark', 'Dark'],
+          ['system', 'Match macOS']
+        ]}
+      />
+      <SelectRow
+        settingKey="textSize"
+        label="Text size"
+        options={[
+          ['small', 'Small'],
+          ['normal', 'Default'],
+          ['large', 'Large']
+        ]}
+      />
+      <ToggleRow
+        settingKey="highContrast"
+        label="Increase contrast"
+        desc="Stronger text, borders and focus rings."
+      />
+      <SectionTitle>Weather</SectionTitle>
+      <TextRow
+        settingKey="weatherLocation"
+        label="Your city"
+        desc="Used for “weather” with no place. Empty = guess from your time zone."
+        placeholder="e.g. Bengaluru"
+      />
+      <SelectRow
+        settingKey="temperatureUnit"
+        label="Temperature"
+        options={[
+          ['celsius', 'Celsius'],
+          ['fahrenheit', 'Fahrenheit']
+        ]}
+      />
+    </>
+  )
+}
+
+/** A folder path with a native "Choose…" picker. */
+function FolderRow({ settingKey, label, desc }) {
+  const [value, set, error] = useSetting(settingKey)
+  return (
+    <Row label={label} desc={value ? `${desc ? `${desc} · ` : ''}${value}` : desc} error={error}>
+      <button
+        className={styles.btn}
+        onClick={async () => {
+          const dir = await api.data.pickFolder(label)
+          if (dir) set(dir)
+        }}
+      >
+        Choose…
+      </button>
+    </Row>
+  )
+}
+
+function ProjectFolders() {
+  const [folders, set, error] = useSetting('projectFolders')
+  return (
+    <>
+      <Row
+        label="Project folders"
+        desc="Cast finds git repositories up to 3 levels inside these."
+        error={error}
+      >
+        <button
+          className={styles.btn}
+          onClick={async () => {
+            const dir = await api.data.pickFolder('Add a project folder')
+            if (dir && !folders.includes(dir)) set([...folders, dir])
+          }}
+        >
+          Add…
+        </button>
+      </Row>
+      {folders.map((f) => (
+        <Row key={f} label={<span className={styles.mono}>{f}</span>}>
+          <button
+            className={styles.btn}
+            aria-label={`Remove ${f}`}
+            onClick={() => set(folders.filter((x) => x !== f))}
+          >
+            Remove
+          </button>
+        </Row>
+      ))}
+    </>
+  )
+}
+
+function Developer() {
+  const scriptsEnabled = useStore((s) => s.settings.scriptsEnabled)
+  return (
+    <>
+      <ProjectFolders />
+      <SelectRow
+        settingKey="projectEditor"
+        label="Open projects in"
+        desc="↵ opens in this app, ⌘↵ in your terminal."
+        options={[
+          ['vscode', 'Visual Studio Code'],
+          ['cursor', 'Cursor'],
+          ['zed', 'Zed'],
+          ['sublime', 'Sublime Text'],
+          ['webstorm', 'WebStorm'],
+          ['xcode', 'Xcode'],
+          ['finder', 'Finder']
+        ]}
+      />
+      <SelectRow
+        settingKey="terminalApp"
+        label="Terminal"
+        options={[
+          ['terminal', 'Terminal'],
+          ['iterm', 'iTerm'],
+          ['warp', 'Warp'],
+          ['ghostty', 'Ghostty']
+        ]}
+      />
+      <TextRow settingKey="remBase" label="Root font size for px ↔ rem" number narrow />
+      <SectionTitle>Script commands</SectionTitle>
+      <ToggleRow
+        settingKey="scriptsEnabled"
+        label="Enable script commands"
+        desc="Run executable scripts from one folder. Add “# @cast.title Name” to a script to name it."
+      />
+      {scriptsEnabled && (
+        <>
+          <FolderRow settingKey="scriptsFolder" label="Scripts folder" />
+          <Row label="Open scripts folder" desc="An example script is created the first time.">
+            <button className={styles.btn} onClick={() => api.dev.openScriptsFolder()}>
+              Open
+            </button>
+          </Row>
+        </>
+      )}
+    </>
+  )
+}
+
+function Quicklinks() {
+  const [links, setLinks] = useState([])
+  const [draft, setDraft] = useState({ keyword: '', name: '', url: '' })
+  const [error, setError] = useState(null)
+  const load = useCallback(
+    () =>
+      api.quicklinks
+        .list()
+        .then(setLinks)
+        .catch(() => {}),
+    []
+  )
+  useEffect(() => void load(), [load])
+  const add = async () => {
+    setError(null)
+    try {
+      await api.quicklinks.create({
+        keyword: draft.keyword.trim(),
+        name: draft.name.trim() || draft.keyword.trim(),
+        url: draft.url.trim()
+      })
+      setDraft({ keyword: '', name: '', url: '' })
+      load()
+      useStore.getState().loadQuicklinks()
+    } catch (e) {
+      setError(e.message)
+    }
+  }
+  return (
+    <>
+      <Row
+        label="Your quicklinks"
+        desc="Type the keyword, optionally followed by text that replaces {query} in the URL."
+      />
+      {links.map((l) => (
+        <Row key={l.id} label={`${l.keyword} — ${l.name}`} desc={l.url}>
+          <button
+            className={`${styles.btn} ${styles.btnDanger}`}
+            onClick={async () => {
+              await api.quicklinks.delete(l.id)
+              load()
+              useStore.getState().loadQuicklinks()
+              useStore.getState().showToast('Quicklink deleted', 'info', 6000, {
+                label: 'Undo',
+                run: async () => {
+                  await api.quicklinks.create({ keyword: l.keyword, name: l.name, url: l.url })
+                  load()
+                  useStore.getState().loadQuicklinks()
+                }
+              })
+            }}
+          >
+            Delete
+          </button>
+        </Row>
+      ))}
+      <SectionTitle>Add a quicklink</SectionTitle>
+      <div className={styles.row} style={{ gap: 8, flexWrap: 'wrap' }}>
+        <input
+          className={`${styles.input} ${styles.narrow}`}
+          placeholder="jira"
+          aria-label="Keyword"
+          value={draft.keyword}
+          onChange={(e) => setDraft({ ...draft, keyword: e.target.value })}
+        />
+        <input
+          className={styles.input}
+          style={{ width: 130 }}
+          placeholder="Name"
+          aria-label="Name"
+          value={draft.name}
+          onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+        />
+        <input
+          className={styles.input}
+          style={{ flex: 1, minWidth: 220 }}
+          placeholder="https://jira.acme.com/browse/{query}"
+          aria-label="URL"
+          value={draft.url}
+          onChange={(e) => setDraft({ ...draft, url: e.target.value })}
+          onKeyDown={(e) => e.key === 'Enter' && add()}
+        />
+        <button
+          className={`${styles.btn} ${styles.btnPrimary}`}
+          onClick={add}
+          disabled={!draft.keyword.trim() || !draft.url.trim()}
+        >
+          Add
+        </button>
+      </div>
+      {error && <div className={styles.rowError}>{error}</div>}
+    </>
+  )
+}
+
+function Integrations({ secrets, refreshSecrets }) {
+  return (
+    <>
+      <SelectRow
+        settingKey="captureDefault"
+        label="Default capture destination"
+        desc="Used by the “Send to…” action from notes."
+        options={[
+          ['notes', 'Apple Notes'],
+          ['obsidian', 'Obsidian'],
+          ['notion', 'Notion']
+        ]}
+      />
+      <SectionTitle>Obsidian</SectionTitle>
+      <FolderRow settingKey="obsidianVault" label="Vault folder" />
+      <TextRow
+        settingKey="obsidianInboxNote"
+        label="Inbox note"
+        desc="Captures are appended to this note."
+      />
+      <SectionTitle>Notion</SectionTitle>
+      <SecretRow
+        name="notionToken"
+        label="Integration token"
+        desc="Create an internal integration at notion.so/my-integrations, then share your page with it."
+        placeholder="secret_…"
+        configured={secrets.notionToken}
+        onChanged={refreshSecrets}
+      />
+      <TextRow
+        settingKey="notionPageId"
+        label="Page"
+        desc="Paste the page’s link or ID."
+        placeholder="https://www.notion.so/…"
+      />
+      <SectionTitle>Focus mode</SectionTitle>
+      <TextRow
+        settingKey="focusShortcutOn"
+        label="Shortcut to run when focus starts"
+        desc="Name of a macOS Shortcut, e.g. one that turns on a Focus. Runs at each Pomodoro focus block."
+        placeholder="Focus On"
+      />
+      <TextRow
+        settingKey="focusShortcutOff"
+        label="Shortcut to run on breaks"
+        placeholder="Focus Off"
       />
     </>
   )
@@ -195,6 +496,11 @@ function Suggestions({ secrets, refreshSecrets }) {
         label="Learn from my choices"
         desc="Ranks the action you usually pick for similar input higher. Stores only a coarse pattern (like “remind me”), never what you typed."
       />
+      <ToggleRow
+        settingKey="aiCustomLabels"
+        label="Let AI pick my quicklinks, scripts and Shortcuts"
+        desc="Sends their names (not their URLs or contents) to the classifier so it can suggest them."
+      />
     </>
   )
 }
@@ -205,6 +511,11 @@ function Actions() {
   const toggle = (list, id) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id])
   return (
     <>
+      <ToggleRow
+        settingKey="taskReminders"
+        label="Remind me when tasks are due"
+        desc="A task with a due time also gets a reminder notification."
+      />
       <SelectRow
         settingKey="timerSound"
         label="Timer sound"
@@ -476,6 +787,78 @@ function Privacy() {
           onConfirm={async () => (await api.reminders.clear(), toast('Reminders deleted'))}
         />
       </Row>
+      <DataTransfer />
+    </>
+  )
+}
+
+/** Move notes, snippets, quicklinks, tasks and settings between Macs (never API keys or tokens). */
+function DataTransfer() {
+  const [passphrase, setPassphrase] = useState('')
+  const [msg, setMsg] = useState(null)
+  const run = async (fn) => {
+    setMsg(null)
+    try {
+      setMsg(await fn())
+    } catch (e) {
+      setMsg({ error: e.message })
+    }
+  }
+  return (
+    <>
+      <SectionTitle>Move to another Mac</SectionTitle>
+      <Row
+        label="Passphrase"
+        desc="Optional. Encrypts the export (AES-256); needed again to import it."
+      >
+        <input
+          type="password"
+          className={styles.input}
+          value={passphrase}
+          autoComplete="new-password"
+          placeholder="Leave empty for no encryption"
+          aria-label="Export passphrase"
+          onChange={(e) => setPassphrase(e.target.value)}
+        />
+      </Row>
+      <Row
+        label="Export"
+        desc="Notes, snippets, quicklinks, tasks and settings. API keys and tokens are never included."
+        error={msg?.error}
+      >
+        {msg?.path && !msg.counts && (
+          <span className={styles.badge} data-ok="true">
+            Saved
+          </span>
+        )}
+        <button
+          className={styles.btn}
+          onClick={() => run(() => api.data.export(passphrase || undefined))}
+        >
+          Export…
+        </button>
+      </Row>
+      <Row
+        label="Import"
+        desc={
+          msg?.counts
+            ? `Imported ${msg.counts.notes} notes, ${msg.counts.snippets} snippets, ${msg.counts.quicklinks} quicklinks, ${msg.counts.tasks} tasks and ${msg.counts.settings} settings.`
+            : 'Merges into what you have; nothing is overwritten.'
+        }
+      >
+        <button
+          className={styles.btn}
+          onClick={() =>
+            run(async () => {
+              const r = await api.data.import(passphrase || undefined)
+              if (r.counts) useStore.getState().loadQuicklinks()
+              return r
+            })
+          }
+        >
+          Import…
+        </button>
+      </Row>
     </>
   )
 }
@@ -526,6 +909,15 @@ function Permissions() {
     <>
       {row('screen', 'Screen Recording', 'Needed for screenshots and screen recordings.')}
       {row('microphone', 'Microphone', 'Only if “Include microphone audio” is on.')}
+      {row('accessibility', 'Accessibility', 'Needed for window layouts (left half, maximize…).')}
+      <Row
+        label="Automation"
+        desc="macOS asks the first time Cast controls Notes, Contacts, Finder or System Events."
+      >
+        <button className={styles.btn} onClick={() => api.permissions.open('automation')}>
+          Open System Settings
+        </button>
+      </Row>
       <Row label="Notifications" desc="Timers and reminders use native notifications.">
         <button className={styles.btn} onClick={() => api.permissions.open('notifications')}>
           Open System Settings
@@ -557,6 +949,20 @@ function About() {
   return (
     <>
       <Row label="Cast" desc={info ? `Version ${info.version}` : ''} />
+      <Row
+        label="Copy diagnostics"
+        desc="Versions, settings and recent log for a bug report. No keys, no typed text."
+      >
+        <button
+          className={styles.btn}
+          onClick={async () => {
+            await api.data.diagnostics()
+            useStore.getState().showToast('Diagnostics copied', 'success', 1500)
+          }}
+        >
+          Copy
+        </button>
+      </Row>
       <Row label="Data folder" desc={info?.dataDir}>
         <button className={styles.btn} onClick={() => api.app.openPath('data')}>
           Open
@@ -595,6 +1001,9 @@ export default function SettingsView() {
     calendar: <Calendar secrets={secrets} refreshSecrets={refreshSecrets} />,
     capture: <Capture />,
     search: <Search />,
+    developer: <Developer />,
+    quicklinks: <Quicklinks />,
+    integrations: <Integrations secrets={secrets} refreshSecrets={refreshSecrets} />,
     privacy: <Privacy />,
     permissions: <Permissions />,
     about: <About />

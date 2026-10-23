@@ -5,6 +5,7 @@
  */
 :root {
   color-scheme: light;
+  --zoom: 1;
 
   /* colors */
   --bg-blue: #e7eeff;
@@ -30,6 +31,21 @@
   --success-pale: #e8f6ee;
   --warn: #b54708;
   --warn-pale: #fef3e6;
+
+  --hover: #f6f7f9;
+  --selected: #eef3ff;
+  --surface-sunken: #f7f8fa;
+  --surface-press: #e9ebef;
+  --divider: #f1f2f5;
+  --track: #e4e7ec;
+  --kbd: #aab0bc;
+  --text-strong: #374151;
+  --accent-border: #d6e1ff;
+  --danger-border: #f6cbc7;
+  --toast-bg: #111827;
+  --toast-fg: #ffffff;
+  --card-bg: var(--surface);
+  --stage-border: rgba(255, 255, 255, 0.85);
 
   /* shadows */
   --shadow-soft: rgba(17, 24, 39, 0.08);
@@ -121,4 +137,72 @@ button {
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+}
+
+/* ---- dark theme (Settings → General → Theme) --------------------------------------------------- */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-blue: #1b2233;
+  --bg-neutral: #17191f;
+  --bg-ivory: #221f1a;
+  --surface: #1f2128;
+  --text: #f3f4f6;
+  --text-body: #b4b9c4;
+  --text-2: #9aa0ab;
+  --text-input: #eceef2;
+  --text-strong: #d9dce2;
+  --placeholder: #6f7682;
+  --accent: #6b93ff;
+  --accent-hover: #7fa1ff;
+  --accent-press: #5a83f0;
+  --accent-pale: rgba(107, 147, 255, 0.16);
+  --accent-ring: rgba(107, 147, 255, 0.28);
+  --accent-border: rgba(107, 147, 255, 0.35);
+  --border: #2d3039;
+  --border-strong: #3a3e48;
+  --icon-surface: #2a2d35;
+  --hover: #262931;
+  --selected: rgba(107, 147, 255, 0.14);
+  --surface-sunken: #1a1c22;
+  --surface-press: #30343d;
+  --divider: #2a2d35;
+  --track: #353943;
+  --kbd: #4a4f5b;
+  --danger: #ff7b72;
+  --danger-pale: rgba(255, 123, 114, 0.14);
+  --danger-border: rgba(255, 123, 114, 0.35);
+  --success: #4cc38a;
+  --success-pale: rgba(76, 195, 138, 0.14);
+  --warn: #f0b05a;
+  --warn-pale: rgba(240, 176, 90, 0.14);
+  --toast-bg: #f3f4f6;
+  --toast-fg: #111827;
+  --stage-border: rgba(255, 255, 255, 0.07);
+  --shadow-float: 0 14px 34px -12px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.35);
+  --stage: linear-gradient(115deg, var(--bg-blue) 0%, var(--bg-neutral) 52%, var(--bg-ivory) 100%);
+}
+
+/* ---- high contrast (Settings → General) --------------------------------------------------------- */
+:root[data-contrast='high'] {
+  --text-body: #374151;
+  --text-2: #4b5563;
+  --placeholder: #6b7280;
+  --border: #9ca3af;
+  --border-strong: #6b7280;
+  --selected: #dbe6ff;
+  --accent: #1d4ed8;
+  --accent-hover: #1e40af;
+  --accent-press: #1e3a8a;
+}
+:root[data-theme='dark'][data-contrast='high'] {
+  --text-body: #e5e7eb;
+  --text-2: #d1d5db;
+  --placeholder: #9ca3af;
+  --border: #6b7280;
+  --border-strong: #9ca3af;
+  --selected: rgba(147, 175, 255, 0.3);
+  --accent: #93afff;
+}
+:root[data-contrast='high'] :focus-visible {
+  outline-width: 3px;
 }

@@ -2,6 +2,7 @@ import { createIpc } from './handle.js'
 import { registerActions } from './actions.js'
 import { registerCalendar } from './calendar.js'
 import { registerFeatures } from './features.js'
+import { registerProductivity } from './productivity.js'
 import { registerLauncher } from './launcher.js'
 import { registerNotes } from './notes.js'
 import { registerReminders } from './reminders.js'
@@ -20,6 +21,7 @@ export function registerIpc(ctx) {
     registerReminders,
     registerCalendar,
     registerFeatures,
+    registerProductivity,
     registerSettings
   ]) {
     register(ipc, ctx)

@@ -15,11 +15,12 @@
 }
 
 .stage {
+  zoom: var(--zoom);
   background: var(--stage);
   border-radius: var(--r-frame);
   padding: 7px;
   box-shadow: var(--shadow-float);
-  border: 1px solid rgba(255, 255, 255, 0.85);
+  border: 1px solid var(--stage-border);
   transform-origin: 50% 0;
 }
 .stage[data-anim='0'] {
@@ -171,10 +172,10 @@
   transition: background var(--ease);
 }
 .row:hover {
-  background: #f8f9fb;
+  background: var(--hover);
 }
 .row[aria-selected='true'] {
-  background: #f1f5ff;
+  background: var(--selected);
 }
 .tile {
   flex: none;
@@ -184,15 +185,15 @@
   display: grid;
   place-items: center;
   background: var(--icon-surface);
-  color: #4b5563;
+  color: var(--text-strong);
   transition:
     background var(--ease),
     color var(--ease);
 }
 .row[aria-selected='true'] .tile {
-  background: #fff;
+  background: var(--surface);
   color: var(--accent);
-  box-shadow: 0 0 0 1px #dbe5ff;
+  box-shadow: 0 0 0 1px var(--accent-border);
 }
 .text {
   flex: 1;
@@ -261,7 +262,7 @@
   padding: 4px 10px;
   border-radius: var(--r-pill);
   background: var(--icon-surface);
-  color: #4b5563;
+  color: var(--text-strong);
   transition:
     background var(--ease),
     color var(--ease);
@@ -306,7 +307,7 @@
   font: 600 10px/1 var(--font);
   padding: 3px 6px;
   border-radius: 6px;
-  background: #aab0bc;
+  background: var(--kbd);
   color: #fff;
 }
 .notice {
@@ -334,9 +335,12 @@
   border-radius: var(--r-pill);
   font-size: 12.5px;
   font-weight: 500;
-  background: var(--text);
-  color: #fff;
+  background: var(--toast-bg);
+  color: var(--toast-fg);
   box-shadow: 0 8px 20px -8px rgba(17, 24, 39, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   animation: toastIn 150ms ease-out;
 }
 .toast[data-kind='error'] {
@@ -363,7 +367,7 @@
   gap: 12px;
   align-items: flex-start;
   padding: 14px;
-  background: #fafbfc;
+  background: var(--surface-sunken);
   border-radius: var(--r-card);
 }
 .permission h3 {
@@ -402,4 +406,43 @@
 }
 .btn:active {
   background: var(--accent-press);
+}
+
+.toastAction {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 650;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+/* ---- briefing strip on the empty state ---------------------------------------------------------- */
+.briefing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 2px 2px 8px;
+  padding: 8px 10px;
+  border-radius: var(--r-card);
+  background: var(--surface-sunken);
+  border: 0;
+  width: calc(100% - 4px);
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--text-body);
+  transition: background var(--ease);
+}
+.briefing:hover {
+  background: var(--hover);
+}
+.briefing b {
+  color: var(--text);
+  font-weight: 600;
+}
+.dot {
+  color: var(--placeholder);
 }

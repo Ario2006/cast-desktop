@@ -12,21 +12,26 @@ const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)')
 
 /** Widgets that keep running state in main and stay on screen when the launcher is reopened. */
 const PINNED_WIDGETS = new Set(['timer.start', 'stopwatch.start', 'pomodoro.start'])
-const EMPTY_PARTS = { local: [], files: [], notes: [], ai: [], rates: [], snippets: [] }
+// every async source writes its rows into one slot; `live` holds resolved results (weather, …)
+const EMPTY_PARTS = {
+  local: [],
+  files: [],
+  notes: [],
+  ai: [],
+  live: [],
+  snippets: [],
+  projects: [],
+  scripts: [],
+  shortcuts: [],
+  contacts: []
+}
 
 function buildSuggestions(state, parts = state.parts) {
   if (!state.query.trim())
     return state.settings.showRecentOnEmpty
       ? emptyStateRows(state)
       : emptyStateRows({ ...state, recents: [] })
-  const list = [
-    ...parts.local,
-    ...parts.files,
-    ...parts.notes,
-    ...parts.snippets,
-    ...parts.rates,
-    ...parts.ai
-  ]
+  const list = Object.values(parts).flat()
   // "learned": a small boost for what you usually pick for this kind of input (never the text itself)
   const counts = state.learned[inputShape(state.query)]
   const annotated = counts
@@ -58,6 +63,8 @@ export const useStore = create((set, get) => ({
   settings: DEFAULT_SETTINGS,
   stats: {},
   learned: {},
+  quicklinks: [],
+  briefing: null,
   pomodoro: null,
   recents: [],
   timers: [],
@@ -84,7 +91,21 @@ export const useStore = create((set, get) => ({
       .then((pomodoro) => set({ pomodoro }))
       .catch(() => {})
     get().refreshHistory()
+    get().loadQuicklinks()
+    get().loadBriefing()
     get().recompute()
+  },
+
+  async loadQuicklinks() {
+    const quicklinks = await api.quicklinks.list().catch(() => [])
+    set({ quicklinks })
+    if (get().query.trim()) get().setQuery(get().query)
+  },
+
+  /** The empty-state briefing (agenda, due tasks, weather); refreshed each time Cast opens. */
+  async loadBriefing() {
+    const briefing = await api.overview.briefing().catch(() => null)
+    set({ briefing })
   },
 
   async refreshHistory() {
@@ -100,7 +121,12 @@ export const useStore = create((set, get) => ({
   // --- query / suggestions ---------------------------------------------------------------
   ctx() {
     const s = get()
-    return { now: new Date(), settings: s.settings, recording: s.status.recording }
+    return {
+      now: new Date(),
+      settings: s.settings,
+      recording: s.status.recording,
+      quicklinks: s.quicklinks
+    }
   },
 
   /** Tier 1 runs synchronously inside setQuery so local rows render on the same keystroke. */
@@ -174,6 +200,7 @@ export const useStore = create((set, get) => ({
       ...(s.settings.onboarded ? {} : { view: 'welcome' })
     }))
     get().refreshHistory()
+    get().loadBriefing()
     api.status
       .get()
       .then((status) => set({ status }))
@@ -219,9 +246,10 @@ export const useStore = create((set, get) => ({
   },
 
   // --- feedback ----------------------------------------------------------------------------
-  showToast(text, kind = 'info', ms = 2200) {
+  /** `action`: optional { label, run } button, e.g. Undo. */
+  showToast(text, kind = 'info', ms = 2200, action = null) {
     const id = Date.now()
-    set({ toast: { id, text, kind } })
+    set({ toast: { id, text, kind, action } })
     setTimeout(() => get().toast?.id === id && set({ toast: null }), ms)
   },
   setPermissionCard: (permissionCard) => set({ permissionCard }),

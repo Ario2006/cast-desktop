@@ -91,10 +91,14 @@ export default function NoteWidget({ params }) {
     } else if (e.metaKey && e.key === 'Backspace' && noteId.current) {
       e.preventDefault()
       dirty.current = false
+      const { title: t, body: b } = latest.current
       await api.notes.delete(noteId.current)
       noteId.current = null
       useStore.getState().closeWidget()
-      useStore.getState().showToast('Note deleted')
+      useStore.getState().showToast('Note deleted', 'info', 6000, {
+        label: 'Undo',
+        run: () => api.notes.create({ title: t || undefined, body: b })
+      })
     }
   }
 

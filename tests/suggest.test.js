@@ -4,6 +4,7 @@ import {
   AI_ACTION_IDS,
   getAction,
   isEnabled,
+  makeSuggestion,
   stableStringify
 } from '../src/shared/actionRegistry.js'
 import { rank } from '../src/shared/ranking.js'
@@ -250,5 +251,18 @@ describe('fuzzy strictness', () => {
     const plain = rank(localSuggestions('note milk', ctx())).map((r) => r.actionId)
     const learned = rank(rows).map((r) => r.actionId)
     expect(learned.indexOf('notes.search')).toBeLessThanOrEqual(plain.indexOf('notes.search'))
+  })
+})
+
+describe('mid-word fuzzy hits are demoted', () => {
+  it('a snippet named "sig" outranks "Insights" for the query "sig"; a real prefix still wins', () => {
+    const snippet = makeSuggestion(getAction('snippet.copy'), { id: 1, name: 'sig' }, ctx(), {
+      source: 'snippets',
+      matchScore: 0.42
+    })
+    const ranked = rank([...localSuggestions('sig', ctx()), snippet], { now: NOW.getTime() })
+    expect(ranked[0].actionId).toBe('snippet.copy')
+    expect(top('insi')[0].actionId).toBe('insights.show')
+    expect(top('timr')[0].actionId).toBe('timer.start')
   })
 })

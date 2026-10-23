@@ -316,3 +316,90 @@ describe('Openjev second question (kind) and caching', () => {
     expect(fetch).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('custom labels (your quicklinks, scripts, Shortcuts)', () => {
+  it('offers them to the classifier and maps the winner back to a runnable action', async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementation(async () => json(answer({ 'ql:jira': 0.8, none: 0.2 })))
+    const custom = [
+      {
+        label: 'ql:jira',
+        hint: 'Open Jira (company issue tracker)',
+        actionId: 'quicklink.open',
+        params: { id: 1, name: 'Jira', url: 'https://jira.x.com' }
+      }
+    ]
+    const { intents } = await createOpenjevProvider({
+      baseUrl: 'https://x',
+      model: 'm',
+      apiKey: 'k',
+      fetch
+    }).classify({
+      input: 'open our issue tracker',
+      context: { ...ctx, custom },
+      signal: signal()
+    })
+    expect(JSON.parse(fetch.mock.calls[0][1].body).questions.tool.criteria['ql:jira']).toBe(
+      'Open Jira (company issue tracker)'
+    )
+    expect(intents).toEqual([
+      { actionId: 'quicklink.open', confidence: 0.8, params: custom[0].params }
+    ])
+  })
+  it('the service passes them through validation', async () => {
+    const fetch = vi
+      .fn()
+      .mockImplementation(async () => json(answer({ 'sc:Morning': 0.9, none: 0.1 })))
+    const svc = createAiService({
+      getSettings: () => DEFAULT_SETTINGS,
+      getApiKey: () => 'k',
+      fetch,
+      getCustomLabels: () => [
+        {
+          label: 'sc:Morning',
+          hint: 'Run my Morning routine shortcut',
+          actionId: 'shortcut.run',
+          params: { name: 'Morning' }
+        }
+      ]
+    })
+    const r = await svc.classify({ requestId: '1', input: 'start my morning routine' })
+    expect(r.intents[0]).toMatchObject({ actionId: 'shortcut.run', params: { name: 'Morning' } })
+  })
+})
+
+describe('AI routing details', () => {
+  const run = (probs) =>
+    createOpenjevProvider({
+      baseUrl: 'https://x',
+      model: 'm',
+      apiKey: 'k',
+      fetch: vi.fn().mockImplementation(async () => json(answer(probs)))
+    }).classify({
+      input: 'will I need an umbrella tomorrow',
+      context: ctx,
+      signal: signal()
+    })
+  it('generic web search never outranks a confident specific tool', async () => {
+    const { intents } = await run({ 'weather.show': 0.99, 'web.search': 0.99, none: 0.01 })
+    expect(intents.map((i) => i.actionId)).toEqual(['weather.show', 'web.search'])
+    expect(intents[1].confidence).toBeLessThan(intents[0].confidence)
+  })
+  it('free phrasing still yields runnable window / system params', () => {
+    expect(inferParams('window.layout', 'put this window on the left side')).toEqual({
+      layout: 'left'
+    })
+    expect(inferParams('window.layout', 'move it to my other screen')).toEqual({
+      layout: 'nextdisplay'
+    })
+    expect(inferParams('system.command', 'turn on dark mode please')).toEqual({
+      command: 'darkmode'
+    })
+    expect(inferParams('system.command', 'set the volume to 30')).toEqual({
+      command: 'volume',
+      level: 30
+    })
+    expect(inferParams('system.command', 'shut the computer down')).toBeNull() // destructive: exact phrasing only
+  })
+})

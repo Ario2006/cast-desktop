@@ -1,4 +1,4 @@
-import { lazy, Suspense, useLayoutEffect, useRef } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef } from 'react'
 import { api } from './api'
 import Footer from './components/Footer'
 import PermissionCard from './components/PermissionCard'
@@ -39,6 +39,22 @@ export default function App() {
   const leaving = useStore((s) => s.leaving)
   const animToken = useStore((s) => s.animToken)
   const frame = useRef(null)
+  const theme = useStore((s) => s.settings.theme)
+  const textSize = useStore((s) => s.settings.textSize)
+  const highContrast = useStore((s) => s.settings.highContrast)
+
+  // Appearance: theme (incl. following macOS), contrast and text size apply instantly.
+  useEffect(() => {
+    const root = document.documentElement
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const apply = () =>
+      (root.dataset.theme = theme === 'system' ? (mq.matches ? 'dark' : 'light') : theme)
+    apply()
+    mq.addEventListener('change', apply)
+    root.dataset.contrast = highContrast ? 'high' : 'normal'
+    root.style.setProperty('--zoom', { small: '0.92', normal: '1', large: '1.12' }[textSize] ?? '1')
+    return () => mq.removeEventListener('change', apply)
+  }, [theme, textSize, highContrast])
 
   // Keep the native window height in sync with the content (card + footer + shadow margin).
   useLayoutEffect(() => {
@@ -75,8 +91,19 @@ export default function App() {
         )}
         {toast && (
           <div className={styles.toastWrap}>
-            <div className={styles.toast} data-kind={toast.kind} role="status">
-              {toast.text}
+            <div className={styles.toast} data-kind={toast.kind} role="status" aria-live="polite">
+              <span>{toast.text}</span>
+              {toast.action && (
+                <button
+                  className={styles.toastAction}
+                  onClick={() => {
+                    useStore.setState({ toast: null })
+                    toast.action.run()
+                  }}
+                >
+                  {toast.action.label}
+                </button>
+              )}
             </div>
           </div>
         )}

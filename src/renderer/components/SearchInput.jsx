@@ -13,7 +13,19 @@ const CHIPS = {
   'pomodoro.start': 'Pomodoro',
   'clipboard.history': 'Clipboard',
   'snippets.open': 'Snippets',
-  'calendar.agenda': 'Agenda'
+  'calendar.agenda': 'Agenda',
+  confirm: 'Confirm',
+  'tasks.open': 'Tasks',
+  'time.report': 'Time',
+  'emoji.pick': 'Emoji',
+  'dev.scratchpad': 'Dev',
+  'ports.manage': 'Ports',
+  'script.run': 'Script',
+  'chain.run': 'Chain',
+  'search.all': 'Search',
+  'help.cheatsheet': 'Help',
+  'insights.show': 'Insights',
+  'briefing.show': 'Briefing'
 }
 
 export default function SearchInput() {

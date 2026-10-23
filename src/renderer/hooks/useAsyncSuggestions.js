@@ -1,13 +1,33 @@
 import { useEffect, useRef } from 'react'
 import { getAction, makeSuggestion } from '@shared/actionRegistry'
 import { AI_DEBOUNCE_MS, AI_MIN_INPUT } from '@shared/constants'
-import { formatMoney } from '@shared/currency'
+import { parseContact, parseProject, parseShortcut } from '@shared/commands'
 import { fullyHandledLocally, intentsToSuggestions } from '@shared/suggest'
 import { api } from '../api'
 import { useStore } from '../store/useStore'
 
 const FILE_DEBOUNCE_MS = 140
 const OPEN_PREFIX = /^(?:open|launch|find|file)\s+/i
+
+/**
+ * Resolve live rows (weather, translations, definitions, rates…) and publish them as overrides
+ * of the same key, so the row updates in place. Failures turn into a helpful subtitle.
+ */
+async function resolveLive(rows, stale) {
+  const resolved = await Promise.all(
+    rows.map(async (row) => {
+      try {
+        const r = await api.live.resolve(row.actionId, row.params)
+        return { ...row, override: true, title: r.title, subtitle: r.subtitle, resolved: r }
+      } catch (e) {
+        return { ...row, override: true, subtitle: e.message, resolveError: e.code ?? 'ERROR' }
+      }
+    })
+  )
+  if (stale()) return
+  const prev = useStore.getState().parts.live.filter((r) => !resolved.some((x) => x.key === r.key))
+  useStore.getState().setParts({ live: [...prev, ...resolved] })
+}
 
 /**
  * Tier 1.5 (files, apps, notes) and Tier 2 (AI) suggestions. Everything here is async,
@@ -95,38 +115,105 @@ export function useAsyncSuggestions() {
       )
     }
 
-    // --- live currency rate (the local parser recognised "100 usd to eur") --------------------
-    const money = parts.local.find((r) => r.actionId === 'currency.convert')
-    if (money) {
+    // --- live rows: weather, definitions, translations, rates, transforms… (resolved in main) ---------
+    const liveRows = parts.local.filter((r) => getAction(r.actionId)?.live)
+    if (liveRows.length) timers.push(setTimeout(() => resolveLive(liveRows, stale), 120))
+
+    // --- projects / scripts / Shortcuts / contacts ---------------------------------------------------
+    const proj = parseProject(q)
+    if (proj || (!handled && q.length >= 4)) {
       timers.push(
         setTimeout(async () => {
-          const { amount, from, to } = money.params
+          const items = await api.suggest.projects(proj?.query ?? q).catch(() => [])
+          if (stale() || !items.length) return
+          const ctx = useStore.getState().ctx()
+          useStore.getState().setParts({
+            projects: items.map((p, i) =>
+              makeSuggestion(getAction('project.open'), { path: p.path, name: p.name }, ctx, {
+                source: 'projects',
+                subtitle: `${p.display}${p.branch ? ` · ${p.branch}` : ''} · ⌘↵ terminal`,
+                matchScore: (proj ? 0.85 : 0.42) - i * 0.03
+              })
+            )
+          })
+        }, FILE_DEBOUNCE_MS)
+      )
+    }
+    if (useStore.getState().settings.scriptsEnabled && q.length >= 2) {
+      const m = q.match(/^(?:script|run script)\s+(.*)$/i)
+      timers.push(
+        setTimeout(async () => {
+          const items = await api.suggest.scripts(m ? m[1] : q).catch(() => [])
+          if (stale() || !items.length) return
+          const ctx = useStore.getState().ctx()
+          useStore.getState().setParts({
+            scripts: items.map((x, i) =>
+              makeSuggestion(
+                getAction('script.run'),
+                { id: x.id, title: x.title, takesArgument: Boolean(x.argument) },
+                ctx,
+                {
+                  source: 'scripts',
+                  subtitle: x.description || `Script · ${x.id}`,
+                  matchScore: (m ? 0.85 : 0.5) - i * 0.03
+                }
+              )
+            )
+          })
+        }, FILE_DEBOUNCE_MS)
+      )
+    }
+    const sc = parseShortcut(q)
+    if (sc || (!handled && q.length >= 4)) {
+      timers.push(
+        setTimeout(async () => {
+          const names = await api.suggest.shortcuts(sc?.query ?? q).catch(() => [])
+          if (stale() || !names.length) return
+          const ctx = useStore.getState().ctx()
+          useStore.getState().setParts({
+            shortcuts: names.map((name, i) =>
+              makeSuggestion(getAction('shortcut.run'), { name }, ctx, {
+                source: 'shortcuts',
+                matchScore: (sc ? 0.86 : 0.4) - i * 0.03
+              })
+            )
+          })
+        }, FILE_DEBOUNCE_MS + 40)
+      )
+    }
+    const contact = parseContact(q)
+    if (contact && contact.query.length >= 2) {
+      timers.push(
+        setTimeout(async () => {
           try {
-            const r = await api.currency.convert(amount, from, to)
+            const people = await api.suggest.contacts(contact.query)
             if (stale()) return
-            useStore.getState().setParts({
-              rates: [
-                {
-                  ...money,
-                  override: true,
-                  title: `= ${r.text}`,
-                  subtitle: `${formatMoney(amount, from)} · 1 ${from} = ${r.rate.toFixed(4)} ${to}${r.stale ? ' · offline rates' : r.date ? ` · ${r.date}` : ''}`
-                }
-              ]
-            })
+            const ctx = useStore.getState().ctx()
+            const rows = []
+            for (const person of people) {
+              const values = contact.via === 'email' ? person.emails : person.phones
+              for (const value of values.slice(0, 2)) {
+                rows.push(
+                  makeSuggestion(
+                    getAction('contact.open'),
+                    { via: contact.via, value, name: person.name },
+                    ctx,
+                    {
+                      source: 'contacts',
+                      matchScore: 0.9 - rows.length * 0.03
+                    }
+                  )
+                )
+              }
+            }
+            useStore.getState().setParts({ contacts: rows.slice(0, 5) })
           } catch (e) {
-            if (stale()) return
-            useStore.getState().setParts({
-              rates: [
-                {
-                  ...money,
-                  override: true,
-                  subtitle: e.code === 'OFFLINE' ? 'Offline: no saved rates yet' : e.message
-                }
-              ]
-            })
+            if (!stale() && e.code === 'PERMISSION')
+              useStore
+                .getState()
+                .setPermissionCard({ permission: 'automation', message: e.message })
           }
-        }, 120)
+        }, 260)
       )
     }
 
@@ -143,7 +230,7 @@ export function useAsyncSuggestions() {
                 makeSuggestion(getAction('snippet.copy'), { id: n.id, name: n.name }, ctx, {
                   source: 'snippets',
                   subtitle: n.preview,
-                  matchScore: 0.42 - i * 0.02
+                  matchScore: 0.55 - i * 0.02
                 })
               )
             })
@@ -168,6 +255,8 @@ export function useAsyncSuggestions() {
             if (res.ok) {
               const rows = intentsToSuggestions(res.intents, useStore.getState().ctx())
               useStore.getState().setParts({ ai: rows })
+              const live = rows.filter((r) => getAction(r.actionId)?.live)
+              if (live.length) resolveLive(live, stale)
             }
           } catch {
             /* offline etc: status updates arrive separately; keep local results */

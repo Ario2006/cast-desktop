@@ -28,6 +28,11 @@ export async function runSmoke({ windows, log, app, setSetting }) {
 
   const js = (code) => wc.executeJavaScript(code)
   for (const step of steps) {
+    // instant actions hide the launcher; reopen it like the shortcut would
+    if (!windows.isVisible()) {
+      windows.show()
+      await wait(400)
+    }
     if (step.type !== undefined) {
       await js(`(() => { const el = document.querySelector('input'); el.focus();
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(el, ${JSON.stringify(step.type)});

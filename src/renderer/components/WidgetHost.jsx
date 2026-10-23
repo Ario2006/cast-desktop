@@ -11,7 +11,19 @@ const WIDGETS = {
   'pomodoro.start': lazy(() => import('../widgets/PomodoroWidget')),
   'clipboard.history': lazy(() => import('../widgets/ClipboardWidget')),
   'snippets.open': lazy(() => import('../widgets/SnippetsWidget')),
-  'calendar.agenda': lazy(() => import('../widgets/AgendaWidget'))
+  'calendar.agenda': lazy(() => import('../widgets/AgendaWidget')),
+  confirm: lazy(() => import('../widgets/ConfirmWidget')),
+  'tasks.open': lazy(() => import('../widgets/TasksWidget')),
+  'time.report': lazy(() => import('../widgets/TimesheetWidget')),
+  'emoji.pick': lazy(() => import('../widgets/EmojiWidget')),
+  'dev.scratchpad': lazy(() => import('../widgets/ScratchpadWidget')),
+  'ports.manage': lazy(() => import('../widgets/PortsWidget')),
+  'script.run': lazy(() => import('../widgets/ScriptWidget')),
+  'chain.run': lazy(() => import('../widgets/ChainWidget')),
+  'search.all': lazy(() => import('../widgets/SearchAllWidget')),
+  'help.cheatsheet': lazy(() => import('../widgets/CheatSheetWidget')),
+  'insights.show': lazy(() => import('../widgets/InsightsWidget')),
+  'briefing.show': lazy(() => import('../widgets/BriefingWidget'))
 }
 
 export default function WidgetHost({ widget }) {

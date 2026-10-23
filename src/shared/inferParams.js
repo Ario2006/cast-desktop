@@ -1,3 +1,4 @@
+import { inferExtraParams } from './actionsExtra.js'
 import { parseTimerInput } from './durations.js'
 import { normalizeUrl } from './search.js'
 import { parseEvent, parseReminder } from './timeparse.js'
@@ -53,6 +54,6 @@ export function inferParams(actionId, input, { now = new Date(), defaultEventMin
       return url ? { url } : null
     }
     default:
-      return {} // stopwatch, screenshots, recording: nothing to extract
+      return inferExtraParams(actionId, text, { now }) // newer actions (weather, tasks, system…)
   }
 }

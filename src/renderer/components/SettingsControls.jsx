@@ -52,6 +52,7 @@ export function SelectRow({ settingKey, label, desc, options }) {
     <Row label={label} desc={desc} error={error}>
       <select
         className={styles.select}
+        aria-label={label}
         value={value}
         onChange={(e) => set(typeof value === 'number' ? Number(e.target.value) : e.target.value)}
       >
@@ -78,6 +79,7 @@ export function TextRow({ settingKey, label, desc, placeholder, number, narrow }
     <Row label={label} desc={desc} error={error}>
       <input
         className={`${styles.input} ${narrow ? styles.narrow : ''}`}
+        aria-label={label}
         value={draft}
         placeholder={placeholder}
         spellCheck={false}

@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import {
+  screen,
   app,
   clipboard,
   nativeImage,
@@ -20,6 +21,16 @@ import { createRecorder } from './actions/recording.js'
 import { createAiService } from './ai/service.js'
 import { createClipboardHistory } from './clipboardHistory.js'
 import { createCurrencyService } from './currency.js'
+import { createLiveResolver } from './live.js'
+import { quicklinksRepo, tasksRepo, timeRepo } from './db/productivity.js'
+import { createQuickCapture } from './tools/capture.js'
+import { contactUrl } from './tools/contacts.js'
+import { killPort } from './tools/ports.js'
+import { createProjects } from './tools/projects.js'
+import { createScripts } from './tools/scripts.js'
+import { createShortcutsService } from './tools/shortcuts.js'
+import { runSystemCommand } from './tools/system.js'
+import { createWindowLayout } from './tools/windowLayout.js'
 import { openDb } from './db/index.js'
 import { choicesRepo, snippetsRepo } from './db/features.js'
 import { capturesRepo, historyRepo } from './db/history.js'
@@ -72,6 +83,9 @@ function boot(setWindows, encryptionAvailable) {
   const history = historyRepo(db)
   const captures = capturesRepo(db)
   const choices = choicesRepo(db)
+  const tasks = tasksRepo(db)
+  const time = timeRepo(db)
+  const quicklinks = quicklinksRepo(db)
   const snippets = snippetsRepo(db)
   const secrets = createSecretStore({
     file: join(dataDir, 'secrets.bin'),
@@ -102,6 +116,27 @@ function boot(setWindows, encryptionAvailable) {
   ai = createAiService({
     getSettings: settings.all,
     getApiKey: () => secrets.get('aiApiKey'),
+    // your quicklinks, scripts and Shortcuts become extra things the classifier can choose
+    getCustomLabels: async () => [
+      ...quicklinks.list().map((q) => ({
+        label: `ql:${q.keyword}`,
+        hint: `Open ${q.name} (${q.keyword})`,
+        actionId: 'quicklink.open',
+        params: { id: q.id, name: q.name, url: q.url.replace(/\{query\}/g, '') }
+      })),
+      ...scripts.list().map((x) => ({
+        label: `script:${x.id}`,
+        hint: `Run the script “${x.title}”${x.description ? `: ${x.description}` : ''}`,
+        actionId: 'script.run',
+        params: { id: x.id, title: x.title, takesArgument: Boolean(x.argument) }
+      })),
+      ...(await shortcutsService.list()).slice(0, 20).map((name) => ({
+        label: `sc:${name}`,
+        hint: `Run the macOS Shortcut “${name}”`,
+        actionId: 'shortcut.run',
+        params: { name }
+      }))
+    ],
     onStatus: () => windows?.webContents && emitStatus(),
     log
   })
@@ -152,16 +187,65 @@ function boot(setWindows, encryptionAvailable) {
     }
   })
 
+  const shortcutsService = createShortcutsService()
+  const projects = createProjects({ getSettings: settings.all })
+  const scripts = createScripts({ getSettings: settings.all })
+  const capture = createQuickCapture({ getSettings: settings.all, secrets })
+  const live = createLiveResolver({
+    clipboard,
+    getSettings: settings.all,
+    currency,
+    calendarNext: () =>
+      googleAuth.isConnected() ? google.calendar.nextMeeting() : Promise.resolve(null)
+  })
+
+  /** Add a task; a due date in the future also gets a reminder so it actually notifies you. */
+  function addTask(text, dueIso) {
+    const due = dueIso ? Date.parse(dueIso) : null
+    let reminderId = null
+    if (due && due > Date.now() && settings.get('taskReminders')) {
+      reminderId = scheduler.createReminder({ text: `Task: ${text}`, remindAt: due }).id
+    }
+    return tasks.create({ text, due, reminderId })
+  }
+
   const runner = createActionRunner({
     getSettings: settings.all,
     screenshot,
     recorder,
     currency,
-    snippets
+    snippets,
+    tools: {
+      runSystemCommand,
+      applyLayout: createWindowLayout({
+        screen,
+        systemPreferences,
+        hideLauncher: () => windows.hide()
+      }),
+      contactUrl,
+      shortcuts: shortcutsService,
+      projects,
+      killPort,
+      addTask,
+      time,
+      capture,
+      onTrackingChange: () => tray?.refresh()
+    }
   })
+
+  // Focus mode: run your own "Focus on/off" Shortcuts as Pomodoro moves between focus and breaks
+  let focusOn = false
+  const setFocus = (on) => {
+    if (on === focusOn) return
+    focusOn = on
+    const name = settings.get(on ? 'focusShortcutOn' : 'focusShortcutOff')
+    if (name)
+      shortcutsService.run(name).catch((e) => log.warn('focus shortcut failed', { code: e.code }))
+  }
 
   scheduler = createScheduler({
     db,
+    onPomodoroPhase: (phase) => setFocus(phase === 'focus'),
     getPomodoroConfig: () => {
       const s = settings.all()
       return {
@@ -221,6 +305,12 @@ function boot(setWindows, encryptionAvailable) {
           }
         }
         break
+      case 'theme':
+        nativeTheme.themeSource = value
+        break
+      case 'trayDisplay':
+        refreshTrayExtra?.()
+        break
       case 'clipboardHistory':
         if (value) clipboardHistory.start()
         else clipboardHistory.stop()
@@ -252,18 +342,20 @@ function boot(setWindows, encryptionAvailable) {
   const secretsStatus = () => ({
     aiApiKey: secrets.has('aiApiKey'),
     googleClientSecret: secrets.has('googleClientSecret'),
+    notionToken: secrets.has('notionToken'),
     googleConnected: googleAuth.isConnected(),
     encryptionAvailable
   })
 
   // --- UI shell ---------------------------------------------------------------------------
   windows.create()
-  nativeTheme.themeSource = 'light' // the design system is light-only
+  nativeTheme.themeSource = settings.get('theme')
 
   tray = createTray({
     getTimers: () => scheduler.listTimers(),
     getRecording: () => recordingState,
     getTitleEnabled: () => settings.get('trayTimerTitle'),
+    getExtraTitle: () => trayExtra,
     actions: {
       toggle: () => windows.toggle(),
       open: () => windows.show(),
@@ -285,7 +377,39 @@ function boot(setWindows, encryptionAvailable) {
     })
   }
 
+  // Optional menu-bar text: next meeting or current weather (refreshed every 5 minutes)
+  let trayExtra = ''
+  async function refreshTrayExtra() {
+    const mode = settings.get('trayDisplay')
+    try {
+      if (mode === 'weather') {
+        trayExtra = (await live.resolve('weather.show', {})).short ?? ''
+      } else if (mode === 'meeting' && googleAuth.isConnected()) {
+        const ev = await google.calendar.nextMeeting()
+        const mins = ev ? Math.round((Date.parse(ev.start) - Date.now()) / 60_000) : null
+        trayExtra =
+          ev && mins <= 60 ? `${ev.title.slice(0, 18)} ${mins > 0 ? `in ${mins}m` : 'now'}` : ''
+      } else trayExtra = ''
+    } catch {
+      trayExtra = ''
+    }
+    tray.refresh()
+  }
+  setInterval(refreshTrayExtra, 5 * 60_000).unref?.()
+  setTimeout(refreshTrayExtra, 3000).unref?.()
+
   registerIpc({
+    db,
+    tasks,
+    time,
+    quicklinks,
+    live,
+    projects,
+    scripts,
+    shortcuts: shortcutsService,
+    addTask,
+    onTrackingChange: () => tray.refresh(),
+    onQuicklinksChange: () => windows.send(IPC.quicklinksChanged),
     app,
     log,
     dataDir,

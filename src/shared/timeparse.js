@@ -96,6 +96,23 @@ export function parseEvent(input, now = new Date(), { defaultMinutes = 30 } = {}
     if (noun && /^(?:with|about|re:|regarding)\b/i.test(body)) body = `${noun} ${body}`
   }
   if (/^remind/i.test(body)) return null
+  // other commands own these phrasings ("todo buy milk tomorrow 5pm", "track x", "3pm pst in ist")
+  if (
+    !explicit &&
+    /^(?:todo|to-do|task|add task|t:|track|note|jot|n:|timer|translate|tr|time in)\b/i.test(body)
+  )
+    return null
+  if (
+    !explicit &&
+    /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s+[a-z .]+\s+(?:in|to)\s+[a-z .]+$/i.test(body) &&
+    /\b(?:pst|pdt|est|edt|cst|cdt|mst|ist|utc|gmt|bst|cet|jst|aest|sgt|hkt)\b/i.test(body)
+  )
+    return null
+
+  // "every weekday", "every monday and wednesday", "monthly" -> RRULE (stripped before date parsing)
+  const rec = extractRecurrence(body)
+  body = rec.rest
+  const recurrence = rec.rrule ? { recurrence: rec.rrule, recurrenceLabel: rec.label } : {}
 
   let durationSeconds = null
   const forDur = body.match(/\bfor\s+((?:\d+(?:\.\d+)?\s*(?:hours?|hrs?|h|minutes?|mins?|m)\s*)+)/i)
@@ -116,7 +133,8 @@ export function parseEvent(input, now = new Date(), { defaultMinutes = 30 } = {}
       title,
       start,
       end: new Date(start.getTime() + (durationSeconds ?? defaultMinutes * 60) * 1000),
-      inferred: true
+      inferred: true,
+      ...recurrence
     }
   }
   if (!explicit) {
@@ -143,7 +161,16 @@ export function parseEvent(input, now = new Date(), { defaultMinutes = 30 } = {}
   if (result.end) end = result.end.date()
   else end = new Date(start.getTime() + (durationSeconds ?? defaultMinutes * 60) * 1000)
   if (end <= start) end = new Date(start.getTime() + defaultMinutes * 60_000)
-  return { title, start, end, inferred: false }
+  // a weekday rule should start on a matching day ("every weekday 10am" typed on a Saturday)
+  const byday = rec.rrule?.match(/BYDAY=([A-Z,]+)/)?.[1]?.split(',')
+  if (byday) {
+    const codes = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA']
+    const len = end - start
+    for (let i = 0; i < 7 && !byday.includes(codes[start.getDay()]); i++)
+      start.setDate(start.getDate() + 1)
+    end = new Date(start.getTime() + len)
+  }
+  return { title, start, end, inferred: false, ...recurrence }
 }
 
 /** Next occurrence of a repeating reminder strictly after `after`. */
@@ -168,4 +195,49 @@ export function formatWhen(date, now = new Date()) {
   const diffDays = Math.round((startOfDay(d) - startOfDay(now)) / DAY_MS)
   const day = diffDays === 0 ? 'Today' : diffDays === 1 ? 'Tomorrow' : fmtDay.format(d)
   return `${day} ${fmtTime.format(d)}`
+}
+
+const DAY_CODES = { monday: 'MO', tuesday: 'TU', wednesday: 'WE', thursday: 'TH', friday: 'FR', saturday: 'SA', sunday: 'SU', mon: 'MO', tue: 'TU', tues: 'TU', wed: 'WE', thu: 'TH', thur: 'TH', thurs: 'TH', fri: 'FR', sat: 'SA', sun: 'SU' } // prettier-ignore
+const DAY_NAME =
+  '(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tues|tue|wed|thurs|thur|thu|fri|sat|sun)s?'
+const RECUR_RE = new RegExp(
+  `\\b(?:every\\s+weekday|on\\s+weekdays|weekdays|every\\s+day|daily|every\\s+other\\s+week|every\\s+(\\d+)\\s+weeks|every\\s+week|weekly|every\\s+month|monthly|every\\s+year|yearly|annually|every\\s+(${DAY_NAME}(?:\\s*(?:,|and|&)\\s*${DAY_NAME})*))\\b`,
+  'i'
+)
+
+/**
+ * Pull a recurrence phrase out of event text.
+ * "standup every weekday 10am" -> { rrule: 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR', label: 'every weekday', rest: 'standup 10am' }
+ */
+export function extractRecurrence(text) {
+  const m = String(text).match(RECUR_RE)
+  if (!m) return { rrule: null, label: null, rest: String(text) }
+  const phrase = m[0].toLowerCase()
+  let rrule
+  if (/weekday/.test(phrase)) rrule = 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR'
+  else if (/every\s+day|daily/.test(phrase)) rrule = 'RRULE:FREQ=DAILY'
+  else if (/other\s+week/.test(phrase)) rrule = 'RRULE:FREQ=WEEKLY;INTERVAL=2'
+  else if (m[1]) rrule = `RRULE:FREQ=WEEKLY;INTERVAL=${Math.min(52, Math.max(1, Number(m[1])))}`
+  else if (/every\s+week|weekly/.test(phrase)) rrule = 'RRULE:FREQ=WEEKLY'
+  else if (/month/.test(phrase)) rrule = 'RRULE:FREQ=MONTHLY'
+  else if (/year|annual/.test(phrase)) rrule = 'RRULE:FREQ=YEARLY'
+  else if (m[2]) {
+    const days = [
+      ...new Set(
+        m[2]
+          .toLowerCase()
+          .split(/\s*(?:,|and|&)\s*/)
+          .map(
+            (d) =>
+              DAY_CODES[d.replace(/s$/, '').replace(/day$/, '')] ?? DAY_CODES[d.replace(/s$/, '')]
+          )
+          .filter(Boolean)
+      )
+    ]
+    rrule = `RRULE:FREQ=WEEKLY;BYDAY=${days.join(',')}`
+  }
+  const rest = (String(text).slice(0, m.index) + ' ' + String(text).slice(m.index + m[0].length))
+    .replace(/\s+/g, ' ')
+    .trim()
+  return { rrule, label: phrase.replace(/\s+/g, ' '), rest }
 }

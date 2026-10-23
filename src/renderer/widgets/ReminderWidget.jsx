@@ -77,9 +77,23 @@ export default function ReminderWidget({ params }) {
   }
 
   const remove = async () => {
-    if (reminder) await api.reminders.delete(reminder.id).catch(() => {})
+    const r = reminder
+    if (r) await api.reminders.delete(r.id).catch(() => {})
     useStore.getState().closeWidget()
-    useStore.getState().showToast('Reminder deleted')
+    useStore.getState().showToast(
+      'Reminder deleted',
+      'info',
+      6000,
+      r && {
+        label: 'Undo',
+        run: () =>
+          api.reminders.create({
+            text: r.text,
+            remindAt: new Date(r.remindAt).toISOString(),
+            repeat: r.repeat ?? undefined
+          })
+      }
+    )
   }
 
   useFooterHints(

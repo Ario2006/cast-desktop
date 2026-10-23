@@ -38,6 +38,11 @@ export function rank(list, { stats = {}, now = Date.now(), max = MAX_SUGGESTIONS
       prev.title = s.title
       prev.subtitle = s.subtitle ?? prev.subtitle
     }
+    // a live result (weather, translation…) carries what Enter will copy / open
+    if (s.override) {
+      if (s.resolved) prev.resolved = s.resolved
+      if (s.resolveError) prev.resolveError = s.resolveError
+    }
   }
   return [...merged.values()]
     .map((s) => ({ ...s, score: scoreSuggestion(s, stats, now) }))
