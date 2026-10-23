@@ -370,6 +370,10 @@ function boot(setWindows, encryptionAvailable) {
       openSettings: () => windows.show({ settings: true }),
       stopRecording: () => recorder.stop(),
       checkPermissions: () => windows.show({ settings: true, section: 'permissions' }),
+      welcome: () => {
+        setSetting('onboarded', false) // the renderer shows the walkthrough while this is false
+        windows.show({ activate: true })
+      },
       quit: () => app.quit()
     }
   })
@@ -470,7 +474,22 @@ function boot(setWindows, encryptionAvailable) {
 
   // First run: open the launcher once so the welcome walkthrough is the first thing you see.
   if (!settings.get('onboarded') && !process.env.CAST_SMOKE)
-    setTimeout(() => windows.show({ activate: true }), 900)
+    setTimeout(async () => {
+      windows.show({ activate: true })
+      // diagnostics for "the welcome screen didn't appear" reports (no user text involved)
+      setTimeout(async () => {
+        const w = windows.window
+        const text = await windows.webContents
+          ?.executeJavaScript('document.body.innerText.slice(0, 40)')
+          .catch(() => '?')
+        log.info('first-run window', {
+          visible: windows.isVisible(),
+          bounds: w?.getBounds(),
+          opacity: w?.getOpacity(),
+          text
+        })
+      }, 1500)
+    }, 900)
   if (process.env.CAST_E2E) windows.show()
 
   if (process.env.CAST_SMOKE) {

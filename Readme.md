@@ -91,9 +91,13 @@ text. Turn it off or clear it in Settings → Suggestions / Privacy.
   renderer) and press **Test**. Only the text you type is sent. An OpenAI-compatible provider
   (OpenAI, OpenRouter, Ollama, LM Studio…) is available in the same panel. With no key or no network,
   local suggestions keep working.
-- **Google Calendar** — create a _Desktop app_ OAuth client in Google Cloud Console (enable the Calendar API),
-  paste the client ID (and secret, if shown) in Settings → Calendar, then **Connect**. Uses the system browser,
-  loopback redirect and PKCE; tokens are encrypted with `safeStorage`.
+- **Google Calendar (one click)** — users click **Connect**, sign in with Google in their browser, and are done
+  (PKCE + loopback redirect; tokens are encrypted in the Keychain). This works because the app ships with _your_
+  registered Google OAuth client, exactly like other desktop apps. Register it once with `npm run setup:google`
+  (it walks you through Google Cloud Console and writes `resources/google-oauth.json`, which the build compiles
+  in), then run `npm run dist`. Without it, Settings → Calendar → Advanced lets a user paste their own client.
+  While the consent screen is in "Testing", only listed test users can sign in; for the public you need
+  Google's verification of the calendar scopes.
 - **Permissions** — Screen Recording (screenshots/recording), Microphone (optional), Notifications.
   Settings → Permissions shows live status with deep links.
 

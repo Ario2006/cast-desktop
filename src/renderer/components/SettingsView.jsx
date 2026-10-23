@@ -981,6 +981,17 @@ function About() {
           Open
         </button>
       </Row>
+      <Row label="Welcome tour" desc="Shows the first-run setup walkthrough again.">
+        <button
+          className={styles.btn}
+          onClick={async () => {
+            await useStore.getState().setSetting('onboarded', false)
+            useStore.setState({ view: 'welcome' })
+          }}
+        >
+          Show
+        </button>
+      </Row>
       <Row label="Logs" desc="Rotating log file (no queries or secrets).">
         <button className={styles.btn} onClick={() => setShowLogs((v) => !v)}>
           {showLogs ? 'Hide' : 'View'}

@@ -94,6 +94,7 @@ export function createTray({
         : []),
       { type: 'separator' },
       { label: 'Settings…', accelerator: 'Command+,', click: actions.openSettings },
+      { label: 'Welcome tour…', click: actions.welcome },
       { label: 'Check permissions', click: actions.checkPermissions },
       { type: 'separator' },
       { label: 'Quit Cast', accelerator: 'Command+Q', click: actions.quit }
