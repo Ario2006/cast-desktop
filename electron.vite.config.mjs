@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { resolve } from 'node:path'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
@@ -15,9 +16,28 @@ const cspPlugin = () => ({
 
 const alias = { '@shared': resolve('src/shared') }
 
+/**
+ * Google OAuth client baked into the app so users connect with one click. Desktop-app client
+ * credentials are not confidential (Google's own docs say so); the user's tokens still go only to
+ * their Keychain. Source: CAST_GOOGLE_CLIENT_ID / CAST_GOOGLE_CLIENT_SECRET, or resources/google-oauth.json.
+ */
+function bundledGoogle() {
+  let fromFile = {}
+  try {
+    fromFile = JSON.parse(fs.readFileSync(resolve('resources/google-oauth.json'), 'utf8'))
+  } catch {
+    /* none provided: the app falls back to the "bring your own client" setup */
+  }
+  return {
+    clientId: process.env.CAST_GOOGLE_CLIENT_ID || fromFile.clientId || '',
+    clientSecret: process.env.CAST_GOOGLE_CLIENT_SECRET || fromFile.clientSecret || ''
+  }
+}
+
 export default defineConfig({
   main: {
     resolve: { alias },
+    define: { __CAST_GOOGLE__: JSON.stringify(bundledGoogle()) },
     build: {
       rollupOptions: { input: { index: resolve('src/main/index.js') } }
     }

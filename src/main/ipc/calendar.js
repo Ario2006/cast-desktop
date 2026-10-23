@@ -1,6 +1,7 @@
 import { IPC, UNDO_WINDOW_MS } from '../../shared/constants.js'
 import * as s from '../../shared/validate.js'
 import { CalendarError } from '../google/calendar.js'
+import { BUNDLED_GOOGLE } from '../google/bundled.js'
 import { GoogleAuthError } from '../google/oauth.js'
 
 const wrap = (e) => {
@@ -16,6 +17,7 @@ export function registerCalendar({ handle }, ctx) {
 
   handle(IPC.calendarStatus, null, () => ({
     configured: ctx.google.auth.isConfigured(),
+    builtin: Boolean(BUNDLED_GOOGLE.clientId),
     connected: ctx.google.auth.isConnected()
   }))
 

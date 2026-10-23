@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { prettyAccelerator } from './SettingsControls'
 import { api } from '../api'
 import { useStore } from '../store/useStore'
+import Icon from './Icon'
 import styles from './welcome.module.css'
 
 function Step({ title, desc, done, action }) {
   return (
     <div className={styles.step}>
       <span className={styles.mark} data-done={done}>
-        {done ? '✓' : ''}
+        {done && <Icon name="check" size={12} strokeWidth={3} />}
       </span>
       <div className={styles.text}>
         <div className={styles.title}>{title}</div>

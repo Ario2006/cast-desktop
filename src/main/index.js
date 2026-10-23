@@ -36,6 +36,7 @@ import { choicesRepo, snippetsRepo } from './db/features.js'
 import { capturesRepo, historyRepo } from './db/history.js'
 import { notesRepo } from './db/notes.js'
 import { createCalendarClient } from './google/calendar.js'
+import { BUNDLED_GOOGLE } from './google/bundled.js'
 import { createGoogleAuth } from './google/oauth.js'
 import { registerIpc } from './ipc/index.js'
 import { createLogger } from './log.js'
@@ -143,7 +144,12 @@ function boot(setWindows, encryptionAvailable) {
 
   const googleAuth = createGoogleAuth({
     secrets,
-    getClientId: () => settings.get('googleClientId'),
+    // a user-supplied client wins; otherwise the one-click client compiled into the app
+    getClientId: () => settings.get('googleClientId') || BUNDLED_GOOGLE.clientId || '',
+    getClientSecret: () =>
+      settings.get('googleClientId')
+        ? secrets.get('googleClientSecret') || undefined
+        : BUNDLED_GOOGLE.clientSecret || undefined,
     openExternal: (url) => shell.openExternal(url)
   })
   const google = { auth: googleAuth, calendar: createCalendarClient({ auth: googleAuth }) }
@@ -272,7 +278,7 @@ function boot(setWindows, encryptionAvailable) {
         showNotification({
           title: n.title,
           body: n.body,
-          sound: 'Glass',
+          sound: s.timerSound,
           actions: [
             { text: 'Snooze 10 min', onAction: () => scheduler.snoozeReminder(n.reminderId, 10) },
             { text: 'Done', onAction: () => scheduler.doneReminder(n.reminderId) }
@@ -342,6 +348,7 @@ function boot(setWindows, encryptionAvailable) {
   const secretsStatus = () => ({
     aiApiKey: secrets.has('aiApiKey'),
     googleClientSecret: secrets.has('googleClientSecret'),
+    googleBuiltin: Boolean(BUNDLED_GOOGLE.clientId),
     notionToken: secrets.has('notionToken'),
     googleConnected: googleAuth.isConnected(),
     encryptionAvailable
@@ -462,7 +469,8 @@ function boot(setWindows, encryptionAvailable) {
   })
 
   // First run: open the launcher once so the welcome walkthrough is the first thing you see.
-  if (!settings.get('onboarded') && !process.env.CAST_SMOKE) setTimeout(() => windows.show(), 700)
+  if (!settings.get('onboarded') && !process.env.CAST_SMOKE)
+    setTimeout(() => windows.show({ activate: true }), 900)
   if (process.env.CAST_E2E) windows.show()
 
   if (process.env.CAST_SMOKE) {

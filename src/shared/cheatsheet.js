@@ -21,7 +21,7 @@ export const CHEATSHEET = [
   ] },
   { group: 'Developers', items: [
     ['base64 hello', 'Text transforms (or on the clipboard)'], ['uuid', 'Generators: uuid, password 24, lorem 3'],
-    ['0xff', 'Bases, px↔rem, colours'], ['cron 0 9 * * 1-5', 'Explain cron'], ['json', 'JSON · regex · diff scratchpad'],
+    ['0xff', 'Bases, px to rem, colours'], ['cron 0 9 * * 1-5', 'Explain cron'], ['json', 'JSON · regex · diff scratchpad'],
     ['npm react query', 'Docs: npm, mdn, py, crates, so, gh'], ['proj cast', 'Open a project'], ['ports', 'Listening ports'],
     ['kill 3000', 'Stop a server']
   ] },

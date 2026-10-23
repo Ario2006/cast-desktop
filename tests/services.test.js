@@ -16,23 +16,23 @@ const fakeClipboard = (init = '') => {
     _c: c,
     readText: () => c.text,
     writeText: (t) => (c.text = t),
-    availableFormats: () => c.formats
+    has: (f) => c.formats.includes(f)
   }
 }
 
 describe('clipboard history', () => {
-  it('records new copies, de-duplicates, searches and copies back', () => {
+  it('records new copies, de-duplicates, searches and copies back', async () => {
     const cb = fakeClipboard('already here')
     const h = createClipboardHistory({ clipboard: cb })
-    h.start()
-    h.tick()
+    await h.start()
+    await h.tick()
     expect(h.list()).toEqual([]) // what was on the clipboard at enable-time is not captured
     cb._c.text = 'first'
-    h.tick()
+    await h.tick()
     cb._c.text = 'second'
-    h.tick()
+    await h.tick()
     cb._c.text = 'first'
-    h.tick()
+    await h.tick()
     expect(h.list().map((i) => i.text)).toEqual(['first', 'second'])
     expect(h.list('SEC').map((i) => i.text)).toEqual(['second'])
     expect(h.copy(h.list()[1].id)).toBe(true)
@@ -40,30 +40,30 @@ describe('clipboard history', () => {
     h.stop()
   })
 
-  it('skips concealed (password manager), blank and oversized items; caps the list', () => {
+  it('skips concealed (password manager), blank and oversized items; caps the list', async () => {
     const cb = fakeClipboard()
     const h = createClipboardHistory({ clipboard: cb, max: 3 })
     cb._c.formats = ['text/plain', 'org.nspasteboard.ConcealedType']
     cb._c.text = 'hunter2'
-    h.tick()
+    await h.tick()
     cb._c.formats = ['text/plain']
     cb._c.text = '   '
-    h.tick()
+    await h.tick()
     cb._c.text = 'x'.repeat(20_000)
-    h.tick()
+    await h.tick()
     expect(h.list()).toEqual([])
     for (const t of ['a', 'b', 'c', 'd']) {
       cb._c.text = t
-      h.tick()
+      await h.tick()
     }
     expect(h.list().map((i) => i.text)).toEqual(['d', 'c', 'b'])
   })
 
-  it('stop() wipes everything; polling only runs while enabled', () => {
+  it('stop() wipes everything; polling only runs while enabled', async () => {
     vi.useFakeTimers()
     const h = createClipboardHistory({ clipboard: fakeClipboard() })
     expect(vi.getTimerCount()).toBe(0)
-    h.start()
+    await h.start()
     expect(vi.getTimerCount()).toBe(1)
     h.stop()
     expect(vi.getTimerCount()).toBe(0)

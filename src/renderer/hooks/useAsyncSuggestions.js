@@ -18,7 +18,14 @@ async function resolveLive(rows, stale) {
     rows.map(async (row) => {
       try {
         const r = await api.live.resolve(row.actionId, row.params)
-        return { ...row, override: true, title: r.title, subtitle: r.subtitle, resolved: r }
+        return {
+          ...row,
+          override: true,
+          title: r.title,
+          subtitle: r.subtitle,
+          icon: r.icon ?? row.icon,
+          resolved: r
+        }
       } catch (e) {
         return { ...row, override: true, subtitle: e.message, resolveError: e.code ?? 'ERROR' }
       }

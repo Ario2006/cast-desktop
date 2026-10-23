@@ -33,6 +33,7 @@ export function registerFeatures({ handle }, ctx) {
   // --- clipboard history (opt-in) --------------------------------------------------------------
   handle(IPC.clipboardList, s.obj({ query: s.opt(s.str(200)) }), ({ query }) => ({
     enabled: ctx.settings.get('clipboardHistory'),
+    diag: ctx.clipboardHistory.diag(),
     items: ctx.clipboardHistory
       .list(query ?? '')
       .map((i) => ({ id: i.id, text: i.text.slice(0, 600), at: i.at }))

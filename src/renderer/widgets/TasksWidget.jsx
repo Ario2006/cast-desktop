@@ -4,6 +4,7 @@ import { formatWhen } from '@shared/timeparse'
 import { api } from '../api'
 import { useFooterHints } from '../hooks/useWidget'
 import { useStore } from '../store/useStore'
+import Icon from '../components/Icon'
 import styles from './widgets.module.css'
 
 export default function TasksWidget() {
@@ -109,7 +110,7 @@ export default function TasksWidget() {
                   aria-label={`Mark “${t.text}” ${t.done ? 'not done' : 'done'}`}
                   onClick={() => toggle(t)}
                 >
-                  {t.done ? '✓' : ''}
+                  {t.done && <Icon name="check" size={12} strokeWidth={3} />}
                 </button>
                 <span className={styles.itemMain}>
                   <span className={styles.itemTitle}>{t.text}</span>
@@ -125,7 +126,7 @@ export default function TasksWidget() {
                   aria-label={`Delete “${t.text}”`}
                   onClick={() => remove(t)}
                 >
-                  ✕
+                  <Icon name="x" size={13} strokeWidth={2.2} />
                 </button>
               </li>
             )

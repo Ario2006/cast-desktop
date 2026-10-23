@@ -16,31 +16,58 @@ export function createClipboardHistory({ clipboard, now = Date.now, max = 50, in
   let lastSeen = null
   let timer = null
 
-  function tick() {
-    let text
+  // Electron's main-process clipboard API is async (read* / has* return Promises), so everything
+  // here is awaited; a plain `readText()` would hand back a Promise object, not text.
+  /** True when a password manager marked the copy as secret/transient. Never throws. */
+  async function isConcealed() {
     try {
-      const formats = clipboard.availableFormats()
-      if (formats.some((f) => CONCEALED.includes(f))) {
+      const flags = await Promise.all(CONCEALED.map((f) => clipboard.has(f)))
+      return flags.some(Boolean)
+    } catch {
+      return false // can't tell: treat as ordinary text rather than losing the history
+    }
+  }
+
+  let polling = false
+  // counters so the UI can explain *why* nothing is being captured (e.g. macOS blocking reads)
+  const diag = { ticks: 0, textReads: 0, emptyReads: 0, concealed: 0, errors: 0, lastError: null }
+  async function tick() {
+    if (polling) return // a slow read must not stack up overlapping polls
+    polling = true
+    diag.ticks++
+    try {
+      if (await isConcealed()) {
+        diag.concealed++
         lastSeen = null
         return
       }
-      text = clipboard.readText()
-    } catch {
-      return
+      const text = await clipboard.readText()
+      if (typeof text !== 'string') return
+      if (text) diag.textReads++
+      else diag.emptyReads++
+      if (!text.trim() || text.length > MAX_TEXT || text === lastSeen) return
+      lastSeen = text
+      items = [{ id: ++seq, text, at: now() }, ...items.filter((i) => i.text !== text)].slice(
+        0,
+        max
+      )
+    } catch (e) {
+      diag.errors++
+      diag.lastError = String(e?.message ?? e).slice(0, 120)
+    } finally {
+      polling = false
     }
-    if (!text || !text.trim() || text.length > MAX_TEXT || text === lastSeen) return
-    lastSeen = text
-    items = [{ id: ++seq, text, at: now() }, ...items.filter((i) => i.text !== text)].slice(0, max)
   }
 
   return {
     tick,
+    diag: () => ({ ...diag }),
     isRunning: () => timer !== null,
-    start() {
+    async start() {
       if (timer) return
-      const current = clipboard.readText()
-      lastSeen = current || null // what is already on the clipboard when enabled is not recorded
       timer = setInterval(tick, intervalMs)
+      // what is already on the clipboard when enabled is not recorded
+      lastSeen = (await Promise.resolve(clipboard.readText()).catch(() => null)) || null
     },
     stop() {
       if (timer) clearInterval(timer)

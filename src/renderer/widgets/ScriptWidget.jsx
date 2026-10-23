@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../api'
 import { useFooterHints } from '../hooks/useWidget'
 import { useStore } from '../store/useStore'
+import Icon from '../components/Icon'
 import styles from './widgets.module.css'
 
 /** Runs one of your script commands and shows its output (with an argument prompt if it takes one). */
@@ -70,7 +71,9 @@ export default function ScriptWidget({ params }) {
       {state === 'error' && <div className={styles.err}>{result.error}</div>}
       {state === 'done' &&
         (result.mode === 'silent' || !result.output ? (
-          <div className={styles.ok}>✓ Done</div>
+          <div className={styles.ok}>
+            <Icon name="check" size={14} strokeWidth={2.6} /> Done
+          </div>
         ) : (
           <>
             <pre className={styles.pre} tabIndex={0}>

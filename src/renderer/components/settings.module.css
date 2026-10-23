@@ -274,6 +274,26 @@
 .star[aria-pressed='true'] {
   color: #f5b301;
 }
+.advanced {
+  margin: 10px 0 4px;
+}
+.advanced > summary {
+  cursor: default;
+  font-size: 12.5px;
+  font-weight: 540;
+  color: var(--text-2);
+  padding: 6px 2px;
+  list-style: none;
+}
+.advanced > summary::before {
+  content: '›';
+  display: inline-block;
+  width: 12px;
+  transition: transform var(--ease);
+}
+.advanced[open] > summary::before {
+  transform: rotate(90deg);
+}
 .logs {
   margin: 6px 0 0;
   max-height: 180px;
@@ -291,4 +311,13 @@
   font-family: var(--mono);
   font-size: 12px;
   word-break: break-all;
+}
+.result[data-ok] {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.star {
+  display: inline-flex;
+  align-items: center;
 }

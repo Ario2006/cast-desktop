@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { api } from '../api'
 import { useFooterHints, useWidgetKeys } from '../hooks/useWidget'
 import { useStore } from '../store/useStore'
+import Icon from '../components/Icon'
 import styles from './widgets.module.css'
 
 /** Runs one step of a chained command directly (each step was fully parsed already). */
@@ -60,7 +61,12 @@ export default function ChainWidget({ params }) {
   }
   useWidgetKeys((e) => (e.key === 'Enter' && !e.metaKey ? (runAll(), true) : false))
   useFooterHints([['↵', 'Do all']])
-  const icon = { pending: '○', running: '…', done: '✓', error: '!' }
+  const icon = {
+    pending: <Icon name="circle" size={13} />,
+    running: <span className={styles.spinnerDot} />,
+    done: <Icon name="check" size={14} strokeWidth={2.6} />,
+    error: <Icon name="warning" size={14} />
+  }
   return (
     <div className={styles.widget}>
       <div className={styles.big}>Do {params.steps.length} things</div>

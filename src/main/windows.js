@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { BrowserWindow, screen, session } from 'electron'
+import { app, BrowserWindow, screen, session } from 'electron'
 import { IPC, WINDOW } from '../shared/constants.js'
 
 const MIN_HEIGHT = 96
@@ -80,7 +80,8 @@ export function createWindows({ getSettings, log }) {
         process.env.CAST_E2E
       )
         return
-      if (getSettings().hideOnBlur) api.hide()
+      // never auto-hide the first-run walkthrough: launched from Finder, focus can bounce around
+      if (getSettings().hideOnBlur && getSettings().onboarded) api.hide()
     })
     wc.on('did-finish-load', () => {
       if (pendingWidget) {
@@ -130,13 +131,15 @@ export function createWindows({ getSettings, log }) {
     onVisibility: (fn) => (listeners.add(fn), () => listeners.delete(fn)),
 
     /** Show the launcher; optionally open a widget straight away (e.g. from a notification). */
-    show({ widget, settings: openSettings, section } = {}) {
+    show({ widget, settings: openSettings, section, activate } = {}) {
       if (!win || win.isDestroyed()) build()
       if (!win.isVisible()) place()
       suppressBlurUntil = Date.now() + 300
       if (process.env.CAST_E2E || process.env.CAST_SMOKE) {
         win.showInactive() // automated runs must never grab your real keyboard focus
       } else {
+        // accessory (menu-bar) apps aren't frontmost by default; the first-run screen must be
+        if (activate) app.focus({ steal: true })
         win.show()
         win.focus()
       }

@@ -6,6 +6,7 @@ import { api } from '../api'
 import { useNow } from '../hooks/useNow'
 import { useFooterHints } from '../hooks/useWidget'
 import { useStore } from '../store/useStore'
+import Icon from '../components/Icon'
 import styles from './widgets.module.css'
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -218,7 +219,9 @@ export default function CalendarWidget({ params }) {
     return (
       <div className={styles.widget}>
         <div className={styles.success}>
-          <span className={styles.successIcon}>{phase === 'done' ? '✓' : '↩'}</span>
+          <span className={styles.successIcon}>
+            <Icon name={phase === 'done' ? 'check' : 'undo'} size={18} strokeWidth={2.4} />
+          </span>
           <div>
             <div className={styles.big}>{phase === 'done' ? 'Event created' : 'Event removed'}</div>
             <div className={styles.sub}>

@@ -4,6 +4,7 @@ import { formatWhen, parseWhen } from '@shared/timeparse'
 import { api } from '../api'
 import { isEditable, pinWidgetParams, useFooterHints } from '../hooks/useWidget'
 import { useStore } from '../store/useStore'
+import Icon from '../components/Icon'
 import styles from './widgets.module.css'
 
 const toInput = (iso) => {
@@ -127,7 +128,9 @@ export default function ReminderWidget({ params }) {
     return (
       <div className={styles.widget} onKeyDown={onKey}>
         <div className={styles.success}>
-          <span className={styles.successIcon}>✓</span>
+          <span className={styles.successIcon}>
+            <Icon name="check" size={18} strokeWidth={2.6} />
+          </span>
           <div>
             <div className={styles.big}>{reminder.text}</div>
             <div className={styles.sub}>

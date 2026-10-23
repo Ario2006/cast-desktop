@@ -96,11 +96,12 @@ function waitForCode({ state, timeoutMs }) {
 export function createGoogleAuth({
   secrets,
   getClientId,
+  getClientSecret = () => secrets.get('googleClientSecret') || undefined,
   openExternal,
   fetch = globalThis.fetch,
   now = Date.now
 }) {
-  const clientSecret = () => secrets.get('googleClientSecret') || undefined
+  const clientSecret = () => getClientSecret() || undefined
 
   async function tokenRequest(params) {
     const body = new URLSearchParams({ client_id: getClientId(), ...params })

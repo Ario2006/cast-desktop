@@ -207,6 +207,49 @@ const P = {
       <path d="M12 7.5V12l3 2" />
     </>
   ),
+  x: <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />,
+  star: <path d="M12 3.8l2.5 5.1 5.6.8-4 3.9.9 5.6L12 16.6l-5 2.6.9-5.6-4-3.9 5.6-.8L12 3.8z" />,
+  undo: <path d="M9 7L4.5 11.5 9 16M5 11.5h8.5a5 5 0 010 10H11" />,
+  circle: <circle cx="12" cy="12" r="6.5" />,
+  'weather-sun': (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6L7 7M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" />
+    </>
+  ),
+  'weather-partly': (
+    <>
+      <path d="M8.5 7.5a3.2 3.2 0 11-2.6 5.1M8.5 3.5v1.2M3.5 8.5h1.2M5 5l.9.9" />
+      <path d="M9 19h8a3.5 3.5 0 000-7 5 5 0 00-9.6 1.5A2.8 2.8 0 009 19z" />
+    </>
+  ),
+  'weather-cloud': <path d="M7 18.5h10a4 4 0 000-8 5.5 5.5 0 00-10.7 1.4A3.3 3.3 0 007 18.5z" />,
+  'weather-fog': <path d="M5 9h11M3.5 13h17M7 17h13M9 5.5h8" />,
+  'weather-drizzle': (
+    <>
+      <path d="M7 14.5h10a3.5 3.5 0 000-7 5 5 0 00-9.6 1.4A3 3 0 007 14.5z" />
+      <path d="M9 18l-.6 1.6M13 18l-.6 1.6M17 18l-.6 1.6" />
+    </>
+  ),
+  'weather-rain': (
+    <>
+      <path d="M7 14h10a3.5 3.5 0 000-7 5 5 0 00-9.6 1.4A3 3 0 007 14z" />
+      <path d="M8.5 17l-1 3M12.5 17l-1 3M16.5 17l-1 3" />
+    </>
+  ),
+  'weather-snow': (
+    <>
+      <path d="M7 14h10a3.5 3.5 0 000-7 5 5 0 00-9.6 1.4A3 3 0 007 14z" />
+      <path d="M8.5 18h.01M12.5 19.5h.01M16.5 18h.01" strokeWidth="2.4" />
+    </>
+  ),
+  'weather-storm': (
+    <>
+      <path d="M7 14h10a3.5 3.5 0 000-7 5 5 0 00-9.6 1.4A3 3 0 007 14z" />
+      <path d="M12.5 14.5l-2 3.2h3l-2 3.3" />
+    </>
+  ),
+  'weather-unknown': <path d="M12 4a3 3 0 00-3 3v7.2a4.5 4.5 0 106 0V7a3 3 0 00-3-3zM12 17.5v-6" />,
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
   warning: (
     <>
@@ -237,14 +280,14 @@ const TONES = {
 
 export const toneFor = (name) => TONES[name] ?? 'gray'
 
-export default function Icon({ name, size = 18, strokeWidth = 1.8, className }) {
+export default function Icon({ name, size = 18, strokeWidth = 1.8, className, fill = 'none' }) {
   return (
     <svg
       className={className}
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill="none"
+      fill={fill}
       stroke="currentColor"
       strokeWidth={strokeWidth}
       strokeLinecap="round"

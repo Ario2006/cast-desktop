@@ -5,16 +5,16 @@ import { TRANSFORM_LABELS, applyTransform, generate } from '../shared/devtools.j
 
 const fail = (code, message) => Object.assign(new Error(message), { code })
 
-/** WMO weather codes (Open-Meteo) -> [label, emoji] */
+/** WMO weather codes (Open-Meteo) -> [label, icon name] (icons are SVGs in the renderer) */
 const WMO = {
-  0: ['Clear', '☀️'], 1: ['Mostly clear', '🌤'], 2: ['Partly cloudy', '⛅️'], 3: ['Overcast', '☁️'],
-  45: ['Fog', '🌫'], 48: ['Freezing fog', '🌫'], 51: ['Light drizzle', '🌦'], 53: ['Drizzle', '🌦'], 55: ['Heavy drizzle', '🌧'],
-  56: ['Freezing drizzle', '🌧'], 57: ['Freezing drizzle', '🌧'], 61: ['Light rain', '🌦'], 63: ['Rain', '🌧'], 65: ['Heavy rain', '🌧'],
-  66: ['Freezing rain', '🌧'], 67: ['Freezing rain', '🌧'], 71: ['Light snow', '🌨'], 73: ['Snow', '🌨'], 75: ['Heavy snow', '❄️'],
-  77: ['Snow grains', '🌨'], 80: ['Rain showers', '🌦'], 81: ['Rain showers', '🌧'], 82: ['Violent showers', '⛈'],
-  85: ['Snow showers', '🌨'], 86: ['Heavy snow showers', '❄️'], 95: ['Thunderstorm', '⛈'], 96: ['Thunderstorm, hail', '⛈'], 99: ['Thunderstorm, hail', '⛈']
+  0: ['Clear', 'weather-sun'], 1: ['Mostly clear', 'weather-partly'], 2: ['Partly cloudy', 'weather-partly'], 3: ['Overcast', 'weather-cloud'],
+  45: ['Fog', 'weather-fog'], 48: ['Freezing fog', 'weather-fog'], 51: ['Light drizzle', 'weather-drizzle'], 53: ['Drizzle', 'weather-drizzle'], 55: ['Heavy drizzle', 'weather-rain'],
+  56: ['Freezing drizzle', 'weather-rain'], 57: ['Freezing drizzle', 'weather-rain'], 61: ['Light rain', 'weather-drizzle'], 63: ['Rain', 'weather-rain'], 65: ['Heavy rain', 'weather-rain'],
+  66: ['Freezing rain', 'weather-rain'], 67: ['Freezing rain', 'weather-rain'], 71: ['Light snow', 'weather-snow'], 73: ['Snow', 'weather-snow'], 75: ['Heavy snow', 'weather-snow'],
+  77: ['Snow grains', 'weather-snow'], 80: ['Rain showers', 'weather-drizzle'], 81: ['Rain showers', 'weather-rain'], 82: ['Violent showers', 'weather-storm'],
+  85: ['Snow showers', 'weather-snow'], 86: ['Heavy snow showers', 'weather-snow'], 95: ['Thunderstorm', 'weather-storm'], 96: ['Thunderstorm, hail', 'weather-storm'], 99: ['Thunderstorm, hail', 'weather-storm']
 } // prettier-ignore
-export const weatherLabel = (code) => WMO[code] ?? ['Unknown', '🌡']
+export const weatherLabel = (code) => WMO[code] ?? ['Unknown', 'weather-unknown']
 
 /** Guess a city from the system timezone ("Asia/Kolkata" -> "Kolkata") when no location is set. */
 // IANA keeps some historical city names; geocoders know the modern ones.
@@ -121,7 +121,8 @@ export function createLiveResolver({
       const range = `H ${Math.round(d.temperature_2m_max[i])}° · L ${Math.round(d.temperature_2m_min[i])}°`
       if (day === 'tomorrow') {
         return {
-          title: `${icon} Tomorrow: ${label}, ${range}`,
+          title: `Tomorrow: ${label}, ${range}`,
+          icon,
           subtitle: `${loc.name}${rain != null ? ` · ${rain}% chance of rain` : ''}`,
           copyText: `${label}, ${range} (${loc.name})`,
           url: `https://open-meteo.com/en/docs#latitude=${loc.lat}&longitude=${loc.lon}`
@@ -129,10 +130,11 @@ export function createLiveResolver({
       }
       const c = data.current
       return {
-        title: `${icon} ${Math.round(c.temperature_2m)}${deg} ${label}`,
+        title: `${Math.round(c.temperature_2m)}${deg} ${label}`,
+        icon,
         subtitle: `${loc.name} · feels ${Math.round(c.apparent_temperature)}° · ${range}${rain != null ? ` · ${rain}% rain` : ''}`,
         copyText: `${Math.round(c.temperature_2m)}${deg} ${label} in ${loc.name}`,
-        short: `${icon} ${Math.round(c.temperature_2m)}°`
+        short: `${Math.round(c.temperature_2m)}°`
       }
     },
 
@@ -205,7 +207,7 @@ export function createLiveResolver({
     },
 
     async 'dev.transform'({ op, text }) {
-      const input = text ?? clipboard.readText()
+      const input = text ?? (await clipboard.readText())
       if (!input) throw fail('EMPTY', 'Clipboard is empty — type text after the command')
       const source = text == null ? 'clipboard' : 'text'
       let out

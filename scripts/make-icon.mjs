@@ -1,4 +1,4 @@
-// Generates resources/icon.png (1024²): a rounded-square gradient with Cast's "C" ring mark.
+// Generates resources/icon.png (1024²): a flat charcoal tile with Cast's white "C" stroke mark.
 // Pure Node (zlib) so no image tooling is required.  Run: node scripts/make-icon.mjs
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
@@ -15,33 +15,34 @@ const sdRoundRect = (x, y, half, r) => {
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r
 }
 
+// The mark: one stroked "C" (open to the right, round caps) — see arcCoverage().
+const MARK = { cx: N / 2 - 14, cy: N / 2, R: 214, T: 112, gap: 0.72 }
+const TILE = [17, 24, 39] // #111827
+const INK = [255, 255, 255]
+
+function arcCoverage(x, y, { cx, cy, R, T, gap }, feather = 1) {
+  const dx = x - cx
+  const dy = y - cy
+  const r = Math.hypot(dx, dy)
+  const ang = Math.abs(Math.atan2(dy, dx)) // 0 on the right, π on the left
+  let dist
+  if (ang >= gap) dist = Math.abs(r - R)
+  else {
+    // inside the opening: distance to the nearer round cap
+    const ex = cx + R * Math.cos(gap)
+    const ey = cy + R * Math.sin(gap)
+    dist = Math.min(Math.hypot(x - ex, y - ey), Math.hypot(x - ex, y + (ey - cy) - cy))
+  }
+  return clamp01((T / 2 - dist) / feather + 0.5)
+}
+
 for (let y = 0; y < N; y++) {
   for (let x = 0; x < N; x++) {
     const i = (y * N + x) * 4
-    const d = sdRoundRect(x, y, 412, 190) // ~macOS squircle proportions with margin
-    const inside = clamp01(0.5 - d) // 1px antialias
+    const inside = clamp01(0.5 - sdRoundRect(x, y, 412, 190))
     if (inside === 0) continue
-    const t = (x + y) / (2 * N)
-    let r = lerp(92, 150, t)
-    let g = lerp(86, 60, t)
-    let b = lerp(240, 220, t)
-
-    // "C" ring: opening to the right, plus a small dot (the cast "spark")
-    const dx = x - N / 2
-    const dy = y - N / 2
-    const rad = Math.hypot(dx, dy)
-    const ring = clamp01(Math.min(rad - 190, 285 - rad) + 0.5)
-    const ang = Math.abs(Math.atan2(dy, dx))
-    const gap = ang < 0.62 ? clamp01(1 - (0.62 - ang) * 500) : 1
-    const dot = clamp01(80 - Math.hypot(dx - 190, dy) + 0.5)
-    const mark = Math.max(Math.min(ring, gap), dot)
-    r = lerp(r, 255, mark)
-    g = lerp(g, 255, mark)
-    b = lerp(b, 255, mark)
-
-    px[i] = r
-    px[i + 1] = g
-    px[i + 2] = b
+    const mark = arcCoverage(x, y, MARK)
+    for (let k = 0; k < 3; k++) px[i + k] = lerp(TILE[k], INK[k], mark)
     px[i + 3] = Math.round(255 * inside)
   }
 }

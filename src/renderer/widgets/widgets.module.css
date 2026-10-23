@@ -749,3 +749,28 @@
   color: var(--placeholder);
   padding: 8px 8px 0;
 }
+
+.spinnerDot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-pale);
+  border-top-color: var(--accent);
+  animation: spinDot 0.8s linear infinite;
+  display: inline-block;
+}
+@keyframes spinDot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.stepState {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

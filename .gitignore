@@ -7,3 +7,6 @@ node_modules
 test-results
 playwright-report
 .smoke
+
+# optional one-click Google OAuth client (see google-oauth.example.json)
+resources/google-oauth.json

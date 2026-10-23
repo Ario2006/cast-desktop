@@ -13,6 +13,7 @@ import {
   ToggleRow,
   useSetting
 } from './SettingsControls'
+import Icon from './Icon'
 import styles from './settings.module.css'
 
 const SECTIONS = [
@@ -238,7 +239,7 @@ function Developer() {
           ['ghostty', 'Ghostty']
         ]}
       />
-      <TextRow settingKey="remBase" label="Root font size for px ↔ rem" number narrow />
+      <TextRow settingKey="remBase" label="Root font size for px to rem" number narrow />
       <SectionTitle>Script commands</SectionTitle>
       <ToggleRow
         settingKey="scriptsEnabled"
@@ -471,7 +472,7 @@ function Suggestions({ secrets, refreshSecrets }) {
       <Row label="Test connection" error={test && !test.ok ? test.message : null}>
         {test?.ok && (
           <span className={styles.result} data-ok="true">
-            ✓ {test.message}
+            <Icon name="check" size={13} strokeWidth={2.6} /> {test.message}
           </span>
         )}
         <button className={styles.btn} onClick={runTest} disabled={testing}>
@@ -518,7 +519,8 @@ function Actions() {
       />
       <SelectRow
         settingKey="timerSound"
-        label="Timer sound"
+        label="Alert sound"
+        desc="Plays when a timer, Pomodoro phase or reminder goes off."
         options={[
           ['none', 'None'],
           ['Glass', 'Glass'],
@@ -558,7 +560,7 @@ function Actions() {
             title="Pin as favorite"
             onClick={() => setFavorites(toggle(favorites, a.id))}
           >
-            ★
+            <Icon name="star" size={17} fill={favorites.includes(a.id) ? 'currentColor' : 'none'} />
           </button>
           <Toggle
             checked={!disabled.includes(a.id)}
@@ -587,7 +589,7 @@ function Calendar({ secrets, refreshSecrets }) {
     <>
       <Row
         label="Google account"
-        desc="Sign in through your browser (PKCE, loopback redirect). Tokens are encrypted with the Keychain."
+        desc="Click Connect, sign in with Google in your browser, and you're done. Your session is stored encrypted in the macOS Keychain."
         error={state.error}
       >
         {secrets.googleConnected ? (
@@ -615,20 +617,31 @@ function Calendar({ secrets, refreshSecrets }) {
           </button>
         )}
       </Row>
-      <SectionTitle>Your Google Cloud OAuth client (Desktop type)</SectionTitle>
-      <TextRow
-        settingKey="googleClientId"
-        label="Client ID"
-        placeholder="…apps.googleusercontent.com"
-      />
-      <SecretRow
-        name="googleClientSecret"
-        label="Client secret"
-        desc="Optional; Google includes one for Desktop clients."
-        placeholder="GOCSPX-…"
-        configured={secrets.googleClientSecret}
-        onChanged={refreshSecrets}
-      />
+      <details className={styles.advanced} open={!secrets.googleBuiltin}>
+        <summary>
+          {secrets.googleBuiltin ? 'Advanced: use your own Google client' : 'Google client setup'}
+        </summary>
+        {!secrets.googleBuiltin && (
+          <p className={styles.rowDesc} style={{ margin: '4px 2px 8px' }}>
+            This build has no built-in Google sign-in. Create a Desktop-type OAuth client in Google
+            Cloud Console (Calendar API enabled) and paste it here. A packaged release can include
+            one so users just click Connect.
+          </p>
+        )}
+        <TextRow
+          settingKey="googleClientId"
+          label="Client ID"
+          placeholder="…apps.googleusercontent.com"
+        />
+        <SecretRow
+          name="googleClientSecret"
+          label="Client secret"
+          desc="Optional; Google includes one for Desktop clients."
+          placeholder="GOCSPX-…"
+          configured={secrets.googleClientSecret}
+          onChanged={refreshSecrets}
+        />
+      </details>
       <SectionTitle>Defaults</SectionTitle>
       <TextRow
         settingKey="calendarDefaultId"

@@ -85,6 +85,16 @@ export default function ClipboardWidget({ params }) {
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={onKey}
       />
+      {data?.diag &&
+        items.length === 0 &&
+        !query &&
+        data.diag.ticks > 3 &&
+        data.diag.textReads === 0 && (
+          <div className={styles.note}>
+            Cast can’t read the clipboard. On recent macOS versions, allow it under System Settings
+            → Privacy &amp; Security → Paste from Other Apps.
+          </div>
+        )}
       {data && items.length === 0 ? (
         <div className={styles.empty}>
           {query ? 'No matches.' : 'Nothing copied yet — copy some text and it will show up here.'}

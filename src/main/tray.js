@@ -1,21 +1,26 @@
 import { Menu, Tray, nativeImage } from 'electron'
 import { formatClock } from '../shared/durations.js'
 
-/** Monochrome "C" ring drawn into a template bitmap (macOS tints it for light/dark menu bars). */
+/** Monochrome "C" stroke (round caps, open to the right) drawn into a template bitmap; macOS tints it. */
 export function makeTrayIcon() {
   const size = 36 // 18pt @2x
   const buf = Buffer.alloc(size * size * 4)
   const c = (size - 1) / 2
+  const R = 10.2
+  const T = 4.4
+  const gap = 0.72
+  const ex = c + R * Math.cos(gap)
+  const ey = R * Math.sin(gap)
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
       const dx = x - c
       const dy = y - c
-      const r = Math.hypot(dx, dy)
-      const angle = Math.abs(Math.atan2(dy, dx)) // 0 at the right
-      const ring = Math.min(1, Math.max(0, Math.min(r - 9.2, 14 - r)))
-      const gap = angle < 0.62 ? Math.max(0, 1 - (0.62 - angle) * 12) : 1 // opening on the right
-      const dot = Math.max(0, Math.min(1, 3.4 - Math.hypot(dx - 7.5, dy)))
-      const a = Math.round(255 * Math.max(Math.min(ring, gap), dot))
+      const ang = Math.abs(Math.atan2(dy, dx))
+      const dist =
+        ang >= gap
+          ? Math.abs(Math.hypot(dx, dy) - R)
+          : Math.min(Math.hypot(x - ex, y - (c + ey)), Math.hypot(x - ex, y - (c - ey)))
+      const a = Math.round(255 * Math.min(1, Math.max(0, T / 2 - dist + 0.5)))
       const i = (y * size + x) * 4
       buf[i] = 0
       buf[i + 1] = 0
@@ -112,7 +117,7 @@ export function createTray({
       render()
     },
     /** Flash the menu-bar title briefly when a timer completes. */
-    flash(text = '⏰ Done') {
+    flash(text = 'Done') {
       if (flashing) clearInterval(flashing)
       let n = 0
       flashing = setInterval(() => {

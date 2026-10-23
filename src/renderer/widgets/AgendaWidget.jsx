@@ -97,7 +97,7 @@ export default function AgendaWidget({ params }) {
       {state.phase === 'ready' &&
         (events.length === 0 ? (
           <div className={styles.empty}>
-            Nothing scheduled {day === 'today' ? 'today' : 'tomorrow'}. 🎉
+            Nothing scheduled {day === 'today' ? 'today' : 'tomorrow'}.
           </div>
         ) : (
           <ul className={styles.results} role="list">
