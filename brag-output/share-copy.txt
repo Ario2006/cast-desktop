@@ -1,0 +1,1 @@
+Made Cast, a keyboard-first launcher for macOS. Press ⌥ Space, type "remind me to call mom tomorrow at 5pm", press Enter. Done.
