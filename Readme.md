@@ -11,6 +11,14 @@ interactive widget in the same window when an action needs one.
   and a few lookups (weather, exchange rates, definitions, translation) when you use them.
 - **Quiet:** a menu-bar app with no Dock icon and a single small window.
 
+<p align="center">
+  <a href="docs/cast-demo.mp4">
+    <img src="docs/cast-demo.jpg" alt="Cast demo video: type a sentence, press Enter" width="720">
+  </a>
+  <br>
+  <sub>▶ Watch the 21-second demo. Music: "Happy Beats / Business Moves" by Sascha Ende (<a href="https://ende.app">ende.app</a>), CC BY 4.0.</sub>
+</p>
+
 > Status: personal-use build for Apple Silicon and Intel Macs. Not code-signed or notarized (see
 > [Troubleshooting](#troubleshooting)).
 
