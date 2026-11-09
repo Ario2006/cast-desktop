@@ -31,3 +31,4 @@ jobs:
 
       - name: Verify build packaging
         run: npm run build
+

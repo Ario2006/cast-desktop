@@ -62,3 +62,4 @@ npm run format
 ## License
 
 By contributing to Cast, you agree that your contributions will be licensed under the project's [MIT License](LICENSE).
+
