@@ -1,5 +1,9 @@
 # Cast
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Platform: macOS](https://img.shields.io/badge/Platform-macOS-lightgrey.svg?logo=apple)]()
+[![CI](https://github.com/Ario2006/cast-desktop/actions/workflows/ci.yml/badge.svg)](https://github.com/Ario2006/cast-desktop/actions)
+
 **A fast, keyboard-first launcher for macOS.** Press **⌥ Space**, type what you want in plain English,
 press **Enter**. Cast starts timers, sets reminders, books calendar events, takes screenshots, does maths and
 unit/currency conversions, opens files and apps, manages tasks and notes, and much more, then shows a small

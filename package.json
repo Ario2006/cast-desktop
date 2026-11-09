@@ -5,6 +5,14 @@
   "main": "./out/main/index.js",
   "author": "Aryan Kumar",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ario2006/cast-desktop.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ario2006/cast-desktop/issues"
+  },
+  "homepage": "https://github.com/Ario2006/cast-desktop#readme",
   "private": true,
   "scripts": {
     "dev": "electron-vite dev",
